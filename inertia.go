@@ -17,7 +17,7 @@ type Inertia struct {
 	sharedFuncMap template.FuncMap
 }
 
-func NewInertia(url, rootTemplate, version string) *Inertia {
+func New(url, rootTemplate, version string) *Inertia {
 	i := new(Inertia)
 	i.url = url
 	i.rootTemplate = rootTemplate
