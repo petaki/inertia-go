@@ -36,41 +36,38 @@ func (i *Inertia) ShareFunc(key string, value interface{}) {
 	i.sharedFuncMap[key] = value
 }
 
-func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) (context.Context, error) {
+func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) context.Context {
 	contextProps := ctx.Value(ContextKeyProps)
 
 	if contextProps != nil {
 		contextProps, ok := contextProps.(map[string]interface{})
-		if !ok {
-			return nil, ErrInvalidContextProps
-		}
+		if ok {
+			contextProps[key] = value
 
-		contextProps[key] = value
-		return context.WithValue(ctx, ContextKeyProps, contextProps), nil
+			return context.WithValue(ctx, ContextKeyProps, contextProps)
+		}
 	}
 
 	return context.WithValue(ctx, ContextKeyProps, map[string]interface{}{
 		key: value,
-	}), nil
+	})
 }
 
-func (i *Inertia) WithViewData(ctx context.Context, key string, value interface{}) (context.Context, error) {
+func (i *Inertia) WithViewData(ctx context.Context, key string, value interface{}) context.Context {
 	contextViewData := ctx.Value(ContextKeyViewData)
 
 	if contextViewData != nil {
 		contextViewData, ok := contextViewData.(map[string]interface{})
-		if !ok {
-			return nil, ErrInvalidContextViewData
+		if ok {
+			contextViewData[key] = value
+
+			return context.WithValue(ctx, ContextKeyViewData, contextViewData)
 		}
-
-		contextViewData[key] = value
-
-		return context.WithValue(ctx, ContextKeyViewData, contextViewData), nil
 	}
 
 	return context.WithValue(ctx, ContextKeyViewData, map[string]interface{}{
 		key: value,
-	}), nil
+	})
 }
 
 func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component string, props map[string]interface{}) error {
