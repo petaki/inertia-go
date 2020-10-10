@@ -1,8 +1,8 @@
 package inertia
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"html/template"
 	"net/http"
 	"path/filepath"
@@ -36,6 +36,52 @@ func (i *Inertia) ShareFunc(key string, value interface{}) {
 	i.sharedFuncMap[key] = value
 }
 
+func (i *Inertia) WithProp(r *http.Request, key string, value interface{}) error {
+	ctx := r.Context()
+	contextProps := ctx.Value(ContextKeyProps)
+
+	if contextProps != nil {
+		contextProps, ok := contextProps.(map[string]interface{})
+		if !ok {
+			return ErrInvalidContextProps
+		}
+
+		contextProps[key] = value
+		ctx = context.WithValue(ctx, ContextKeyProps, contextProps)
+	} else {
+		ctx = context.WithValue(ctx, ContextKeyProps, map[string]interface{}{
+			key: value,
+		})
+	}
+
+	r = r.WithContext(ctx)
+
+	return nil
+}
+
+func (i *Inertia) WithViewData(r *http.Request, key string, value interface{}) error {
+	ctx := r.Context()
+	contextViewData := ctx.Value(ContextKeyViewData)
+
+	if contextViewData != nil {
+		contextViewData, ok := contextViewData.(map[string]interface{})
+		if !ok {
+			return ErrInvalidContextViewData
+		}
+
+		contextViewData[key] = value
+		ctx = context.WithValue(ctx, ContextKeyViewData, contextViewData)
+	} else {
+		ctx = context.WithValue(ctx, ContextKeyViewData, map[string]interface{}{
+			key: value,
+		})
+	}
+
+	r = r.WithContext(ctx)
+
+	return nil
+}
+
 func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component string, props map[string]interface{}) error {
 	only := make(map[string]string)
 	partial := r.Header.Get("X-Inertia-Partial-Data")
@@ -64,7 +110,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	if contextProps != nil {
 		contextProps, ok := contextProps.(map[string]interface{})
 		if !ok {
-			return errors.New("inertia: could not convert context props to map")
+			return ErrInvalidContextProps
 		}
 
 		for key, value := range contextProps {
@@ -104,7 +150,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	if contextViewData != nil {
 		contextViewData, ok := contextViewData.(map[string]interface{})
 		if !ok {
-			return errors.New("inertia: could not convert context view data to map")
+			return ErrInvalidContextViewData
 		}
 
 		for key, value := range contextViewData {
