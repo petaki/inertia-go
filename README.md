@@ -35,7 +35,7 @@ mux.Handle("/", inertiaManager.Middleware(homeHandler))
 func homeHandler(w http.ResponseWriter, r *http.Request) {
     // ...
 
-    err := app.inertiaManager.Render(w, r, "home/Index", nil)
+    err := inertiaManager.Render(w, r, "home/Index", nil)
     if err != nil {
         // Handler server error...
     }
@@ -47,7 +47,7 @@ Or render with props:
 ```go
 // ...
 
-err := app.inertiaManager.Render(w, r, "home/Index", map[string]interface{}{
+err := inertiaManager.Render(w, r, "home/Index", map[string]interface{}{
     "total": 32,
 })
 
@@ -81,7 +81,7 @@ func authenticate(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         // ...
         
-        ctx = app.inertiaManager.WithProp(r.Context(), "authUserId", user.Id)
+        ctx := inertiaManager.WithProp(r.Context(), "authUserId", user.Id)
         next.ServeHTTP(w, r.WithContext(ctx))
     })
 }
@@ -90,7 +90,7 @@ func authenticate(next http.Handler) http.Handler {
 ### Share data with root template
 
 ```go
-ctx = app.inertiaManager.WithViewData(r.Context(), "meta", meta)
+ctx := inertiaManager.WithViewData(r.Context(), "meta", meta)
 r = r.WithContext(ctx)
 ```
 
