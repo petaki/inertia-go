@@ -64,7 +64,7 @@ The following examples show how to use the package.
 inertiaManager.Share("title", "Inertia App Title")
 ```
 
-### Share a function with the root template
+### Share a function with root template
 
 ```go
 inertiaManager.ShareFunc("asset", assetFunc)
