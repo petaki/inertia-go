@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Inertia type.
 type Inertia struct {
 	url           string
 	rootTemplate  string
@@ -17,6 +18,7 @@ type Inertia struct {
 	sharedFuncMap template.FuncMap
 }
 
+// New function.
 func New(url, rootTemplate, version string) *Inertia {
 	i := new(Inertia)
 	i.url = url
@@ -28,14 +30,17 @@ func New(url, rootTemplate, version string) *Inertia {
 	return i
 }
 
+// Share function.
 func (i *Inertia) Share(key string, value interface{}) {
 	i.sharedProps[key] = value
 }
 
+// ShareFunc function.
 func (i *Inertia) ShareFunc(key string, value interface{}) {
 	i.sharedFuncMap[key] = value
 }
 
+// WithProp function.
 func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) context.Context {
 	contextProps := ctx.Value(ContextKeyProps)
 
@@ -53,6 +58,7 @@ func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) c
 	})
 }
 
+// WithViewData function.
 func (i *Inertia) WithViewData(ctx context.Context, key string, value interface{}) context.Context {
 	contextViewData := ctx.Value(ContextKeyViewData)
 
@@ -70,6 +76,7 @@ func (i *Inertia) WithViewData(ctx context.Context, key string, value interface{
 	})
 }
 
+// Render function.
 func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component string, props map[string]interface{}) error {
 	only := make(map[string]string)
 	partial := r.Header.Get("X-Inertia-Partial-Data")
@@ -83,7 +90,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	page := &Page{
 		Component: component,
 		Props:     make(map[string]interface{}),
-		Url:       r.RequestURI,
+		URL:       r.RequestURI,
 		Version:   i.version,
 	}
 

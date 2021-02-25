@@ -15,5 +15,13 @@ jobs:
         with:
           go-version: 1.15
 
+      - name: Install dependencies
+        run: |
+          go version
+          go get -u golang.org/x/lint/golint
+
+      - name: Lint
+        run: golint ./...
+
       - name: Test
         run: go test -v ./...

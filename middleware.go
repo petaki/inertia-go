@@ -2,6 +2,7 @@ package inertia
 
 import "net/http"
 
+// Middleware function.
 func (i *Inertia) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Inertia") == "" {
