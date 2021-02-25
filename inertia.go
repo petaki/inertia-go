@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -155,7 +156,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	viewData["page"] = page
 
-	ts, err := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap).ParseFiles(i.rootTemplate)
+	ts, err := i.createRootTemplate()
 	if err != nil {
 		return err
 	}
@@ -166,4 +167,13 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	}
 
 	return nil
+}
+
+func (i *Inertia) createRootTemplate() (*template.Template, error) {
+	_, err := os.Stat(i.rootTemplate)
+	if os.IsNotExist(err) {
+		return template.New("app").Funcs(i.sharedFuncMap).Parse(i.rootTemplate)
+	}
+
+	return template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap).ParseFiles(i.rootTemplate)
 }
