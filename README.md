@@ -25,6 +25,19 @@ version := ""                    // Asset version
 inertiaManager := inertia.New(url, rootTemplate, version)
 ```
 
+Or create with `embed.FS` for root template:
+
+```go
+import "embed"
+
+//go:embed template
+var templateFS embed.FS
+
+// ...
+
+inertiaManager := inertia.NewWithFS(url, rootTemplate, version, templateFS)
+```
+
 ### 2. Register the middleware
 
 ```go
@@ -118,6 +131,16 @@ r = r.WithContext(ctx)
     </body>
 </html>
 ```
+
+## Example Apps
+
+### Satellite
+
+https://github.com/petaki/satellite
+
+### Homettp
+
+https://github.com/homettp/homettp
 
 ## Reporting Issues
 

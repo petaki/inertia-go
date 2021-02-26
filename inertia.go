@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ type Inertia struct {
 	version       string
 	sharedProps   map[string]interface{}
 	sharedFuncMap template.FuncMap
+	templateFS    fs.FS
 }
 
 // New function.
@@ -26,6 +28,14 @@ func New(url, rootTemplate, version string) *Inertia {
 	i.version = version
 	i.sharedProps = make(map[string]interface{})
 	i.sharedFuncMap = template.FuncMap{"marshal": marshal}
+
+	return i
+}
+
+// NewWithFS function.
+func NewWithFS(url, rootTemplate, version string, templateFS fs.FS) *Inertia {
+	i := New(url, rootTemplate, version)
+	i.templateFS = templateFS
 
 	return i
 }
@@ -155,7 +165,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	viewData["page"] = page
 
-	ts, err := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap).ParseFiles(i.rootTemplate)
+	ts, err := i.createRootTemplate()
 	if err != nil {
 		return err
 	}
@@ -166,4 +176,14 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	}
 
 	return nil
+}
+
+func (i *Inertia) createRootTemplate() (*template.Template, error) {
+	ts := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap)
+
+	if i.templateFS != nil {
+		return ts.ParseFS(i.templateFS, i.rootTemplate)
+	}
+
+	return ts.ParseFiles(i.rootTemplate)
 }
