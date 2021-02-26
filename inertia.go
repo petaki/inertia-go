@@ -179,9 +179,11 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
+	ts := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap)
+
 	if i.templateFS != nil {
-		return template.New("app").Funcs(i.sharedFuncMap).ParseFS(i.templateFS, i.rootTemplate)
+		return ts.ParseFS(i.templateFS, i.rootTemplate)
 	}
 
-	return template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap).ParseFiles(i.rootTemplate)
+	return ts.ParseFiles(i.rootTemplate)
 }
