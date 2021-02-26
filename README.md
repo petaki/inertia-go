@@ -35,7 +35,7 @@ var templateFS embed.FS
 
 // ...
 
-inertiaManager := inertia.New(url, rootTemplate, version, templateFS)
+inertiaManager := inertia.NewWithFS(url, rootTemplate, version, templateFS)
 ```
 
 ### 2. Register the middleware
