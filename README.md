@@ -27,7 +27,7 @@ inertiaManager := inertia.New(url, rootTemplate, version)
 
 Or create with `embed.FS` for root template:
 
-```
+```go
 import "embed"
 
 //go:embed template
