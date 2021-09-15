@@ -179,7 +179,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 }
 
 // Location function.
-func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, location string) {
+func (i *Inertia) Location(w http.ResponseWriter, location string) {
 	w.Header().Set("X-Inertia-Location", location)
 	w.WriteHeader(http.StatusConflict)
 }
