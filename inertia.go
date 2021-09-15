@@ -178,6 +178,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	return nil
 }
 
+// Location function.
+func (i *Inertia) Location(w http.ResponseWriter, location string) {
+	w.Header().Set("X-Inertia-Location", location)
+	w.WriteHeader(http.StatusConflict)
+}
+
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	ts := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap)
 
