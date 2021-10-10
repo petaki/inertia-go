@@ -170,6 +170,8 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return err
 	}
 
+	w.Header().Set("Content-Type", "text/html")
+
 	err = ts.Execute(w, viewData)
 	if err != nil {
 		return err
