@@ -147,8 +147,6 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 
 		return nil
-	} else {
-		w.Header().Set("Content-Type", "text/html")
 	}
 
 	viewData := make(map[string]interface{})
@@ -171,6 +169,8 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	if err != nil {
 		return err
 	}
+
+	w.Header().Set("Content-Type", "text/html")
 
 	err = ts.Execute(w, viewData)
 	if err != nil {
