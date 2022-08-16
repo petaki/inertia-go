@@ -142,6 +142,10 @@ https://github.com/petaki/satellite
 
 https://github.com/homettp/homettp
 
+### Waterkube
+
+https://github.com/waterkube/waterkube
+
 ## Reporting Issues
 
 If you are facing a problem with this package or found any bug, please open an issue on [GitHub](https://github.com/petaki/inertia-go/issues).
