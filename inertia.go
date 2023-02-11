@@ -53,7 +53,7 @@ func (i *Inertia) EnableSsr(ssrURL string) {
 
 // EnableSsrWithDefault function.
 func (i *Inertia) EnableSsrWithDefault() {
-	i.ssrURL = "http://127.0.0.1:13714"
+	i.EnableSsr("http://127.0.0.1:13714")
 }
 
 // DisableSsr function.
