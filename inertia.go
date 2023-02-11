@@ -18,6 +18,7 @@ type Inertia struct {
 	sharedProps   map[string]interface{}
 	sharedFuncMap template.FuncMap
 	templateFS    fs.FS
+	ssrURL        string
 }
 
 // New function.
@@ -38,6 +39,26 @@ func NewWithFS(url, rootTemplate, version string, templateFS fs.FS) *Inertia {
 	i.templateFS = templateFS
 
 	return i
+}
+
+// IsSsrEnabled function.
+func (i *Inertia) IsSsrEnabled() bool {
+	return i.ssrURL != ""
+}
+
+// EnableSsr function.
+func (i *Inertia) EnableSsr(ssrURL string) {
+	i.ssrURL = ssrURL
+}
+
+// EnableSsrWithDefault function.
+func (i *Inertia) EnableSsrWithDefault() {
+	i.ssrURL = "http://127.0.0.1:13714"
+}
+
+// DisableSsr function.
+func (i *Inertia) DisableSsr() {
+	i.ssrURL = ""
 }
 
 // Share function.
