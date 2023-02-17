@@ -24,12 +24,12 @@ func TestIsSsrEnabled(t *testing.T) {
 	i := New("", "", "")
 
 	if i.IsSsrEnabled() {
-		t.Errorf("expected: false, got: true")
+		t.Error("expected: false, got: true")
 	}
 
 	i.EnableSsrWithDefault()
 
 	if !i.IsSsrEnabled() {
-		t.Errorf("expected: true, got: false")
+		t.Error("expected: true, got: false")
 	}
 }
