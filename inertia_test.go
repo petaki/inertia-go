@@ -33,3 +33,13 @@ func TestIsSsrEnabled(t *testing.T) {
 		t.Error("expected: true, got: false")
 	}
 }
+
+func TestDisableSsr(t *testing.T) {
+	i := New("", "", "")
+	i.EnableSsrWithDefault()
+	i.DisableSsr()
+
+	if i.IsSsrEnabled() {
+		t.Error("expected: false, got: true")
+	}
+}
