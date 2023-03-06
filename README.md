@@ -132,6 +132,30 @@ r = r.WithContext(ctx)
 </html>
 ```
 
+### Root template with SSR
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="css/app.css" rel="stylesheet">
+        <link rel="icon" type="image/x-icon" href="favicon.ico">
+        {{ if .ssr }}
+            {{ raw .ssr.Head }}
+        {{ end }}
+    </head>
+    <body>
+        {{ if not .ssr }}
+            <div id="app" data-page="{{ marshal .page }}"></div>
+        {{ else }}
+            {{ raw .ssr.Body }}
+        {{ end }}
+    </body>
+</html>
+```
+
 ## Example Apps
 
 ### Satellite
