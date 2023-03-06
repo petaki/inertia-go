@@ -70,6 +70,72 @@ err := inertiaManager.Render(w, r, "home/Index", map[string]interface{}{
 //...
 ```
 
+### 4. Server-side Rendering (Optional)
+
+First, enable SSR with the url of the Node server:
+
+```go
+inertiaManager.EnableSsrWithDefault() // http://127.0.0.1:13714
+```
+
+Or with custom url:
+
+```go
+inertiaManager.EnableSsr("http://ssr-host:13714")
+```
+
+This is a simplified example using Vue 3 and Laravel Mix. For more information, please read the official documentation.
+
+```js
+// resources/js/ssr.js
+
+import { createInertiaApp } from '@inertiajs/vue3';
+import createServer from '@inertiajs/vue3/server';
+import { renderToString } from '@vue/server-renderer';
+import { createSSRApp, h } from 'vue';
+
+createServer(page => createInertiaApp({
+    page,
+    render: renderToString,
+    resolve: name => require(`./pages/${name}`),
+    setup({ App, props, plugin }) {
+        return createSSRApp({
+            render: () => h(App, props)
+        }).use(plugin);
+    }
+}));
+```
+
+The following config creates the `ssr.js` file in the root directory, which should not be embedded in the binary.
+
+```js
+// webpack.ssr.mix.js
+
+const mix = require('laravel-mix');
+const webpackNodeExternals = require('webpack-node-externals');
+
+mix.options({ manifest: false })
+    .js('resources/js/ssr.js', '/')
+    .vue({
+        version: 3,
+        options: {
+            optimizeSSR: true
+        }
+    })
+    .webpackConfig({
+        target: 'node',
+        externals: [
+            webpackNodeExternals({
+                allowlist: [
+                    /^@inertiajs/
+                ]
+            })
+        ]
+    });
+```
+
+You can find the example for the SSR based root template below.
+
 ## Examples
 
 The following examples show how to use the package.
@@ -128,6 +194,30 @@ r = r.WithContext(ctx)
     <body>
         <div id="app" data-page="{{ marshal .page }}"></div>
         <script src="js/app.js"></script>
+    </body>
+</html>
+```
+
+### Root template with Server-side Rendering (SSR)
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="css/app.css" rel="stylesheet">
+        <link rel="icon" type="image/x-icon" href="favicon.ico">
+        {{ if .ssr }}
+            {{ raw .ssr.Head }}
+        {{ end }}
+    </head>
+    <body>
+        {{ if not .ssr }}
+            <div id="app" data-page="{{ marshal .page }}"></div>
+        {{ else }}
+            {{ raw .ssr.Body }}
+        {{ end }}
     </body>
 </html>
 ```
