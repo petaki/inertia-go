@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -249,7 +248,7 @@ func (i *Inertia) ssr(page *Page) (*Ssr, error) {
 
 	req, err := http.NewRequest(
 		http.MethodPost,
-		fmt.Sprintf("%s/render", strings.ReplaceAll(i.ssrURL, "/render", "")),
+		strings.ReplaceAll(i.ssrURL, "/render", "")+"/render",
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
