@@ -3,6 +3,7 @@ package inertia
 import (
 	"encoding/json"
 	"html/template"
+	"strings"
 )
 
 func marshal(v interface{}) (template.JS, error) {
@@ -12,4 +13,10 @@ func marshal(v interface{}) (template.JS, error) {
 	}
 
 	return template.JS(js), nil
+}
+
+func lines(elems []string) (template.HTML, error) {
+	html := strings.Join(elems, "\n")
+
+	return template.HTML(html), nil
 }

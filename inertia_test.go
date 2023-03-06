@@ -9,6 +9,10 @@ func TestEnableSsr(t *testing.T) {
 	if i.ssrURL != "ssr.test" {
 		t.Errorf("expected: ssr.test, got: %v", i.ssrURL)
 	}
+
+	if i.ssrClient == nil {
+		t.Error("expected: *http.Client, got: nil")
+	}
 }
 
 func TestEnableSsrWithDefault(t *testing.T) {
@@ -17,6 +21,10 @@ func TestEnableSsrWithDefault(t *testing.T) {
 
 	if i.ssrURL != "http://127.0.0.1:13714" {
 		t.Errorf("expected: http://127.0.0.1:13714, got: %v", i.ssrURL)
+	}
+
+	if i.ssrClient == nil {
+		t.Error("expected: *http.Client, got: nil")
 	}
 }
 
@@ -41,5 +49,9 @@ func TestDisableSsr(t *testing.T) {
 
 	if i.IsSsrEnabled() {
 		t.Error("expected: false, got: true")
+	}
+
+	if i.ssrClient != nil {
+		t.Error("expected: nil, got: *http.Client")
 	}
 }

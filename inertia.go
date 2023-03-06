@@ -1,8 +1,10 @@
 package inertia
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
@@ -19,6 +21,7 @@ type Inertia struct {
 	sharedFuncMap template.FuncMap
 	templateFS    fs.FS
 	ssrURL        string
+	ssrClient     *http.Client
 }
 
 // New function.
@@ -28,7 +31,7 @@ func New(url, rootTemplate, version string) *Inertia {
 	i.rootTemplate = rootTemplate
 	i.version = version
 	i.sharedProps = make(map[string]interface{})
-	i.sharedFuncMap = template.FuncMap{"marshal": marshal}
+	i.sharedFuncMap = template.FuncMap{"marshal": marshal, "lines": lines}
 
 	return i
 }
@@ -43,12 +46,13 @@ func NewWithFS(url, rootTemplate, version string, templateFS fs.FS) *Inertia {
 
 // IsSsrEnabled function.
 func (i *Inertia) IsSsrEnabled() bool {
-	return i.ssrURL != ""
+	return i.ssrURL != "" && i.ssrClient != nil
 }
 
 // EnableSsr function.
 func (i *Inertia) EnableSsr(ssrURL string) {
 	i.ssrURL = ssrURL
+	i.ssrClient = &http.Client{}
 }
 
 // EnableSsrWithDefault function.
@@ -59,6 +63,7 @@ func (i *Inertia) EnableSsrWithDefault() {
 // DisableSsr function.
 func (i *Inertia) DisableSsr() {
 	i.ssrURL = ""
+	i.ssrClient = nil
 }
 
 // Share function.
@@ -186,6 +191,17 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	viewData["page"] = page
 
+	if i.IsSsrEnabled() {
+		ssr, err := i.ssr(page)
+		if err != nil {
+			return err
+		}
+
+		viewData["ssr"] = ssr
+	} else {
+		viewData["ssr"] = nil
+	}
+
 	ts, err := i.createRootTemplate()
 	if err != nil {
 		return err
@@ -223,4 +239,42 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	}
 
 	return ts.ParseFiles(i.rootTemplate)
+}
+
+func (i *Inertia) ssr(page *Page) (*Ssr, error) {
+	body, err := json.Marshal(page)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		fmt.Sprintf("%s/render", strings.ReplaceAll(i.ssrURL, "/render", "")),
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := i.ssrClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, ErrBadSsrStatusCode
+	}
+
+	var ssr Ssr
+
+	err = json.NewDecoder(resp.Body).Decode(&ssr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ssr, nil
 }
