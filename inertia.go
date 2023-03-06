@@ -30,7 +30,7 @@ func New(url, rootTemplate, version string) *Inertia {
 	i.rootTemplate = rootTemplate
 	i.version = version
 	i.sharedProps = make(map[string]interface{})
-	i.sharedFuncMap = template.FuncMap{"marshal": marshal, "lines": lines}
+	i.sharedFuncMap = template.FuncMap{"marshal": marshal, "raw": raw}
 
 	return i
 }
