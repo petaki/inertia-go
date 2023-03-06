@@ -1,6 +1,7 @@
 package inertia
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"html/template"
@@ -18,6 +19,8 @@ type Inertia struct {
 	sharedProps   map[string]interface{}
 	sharedFuncMap template.FuncMap
 	templateFS    fs.FS
+	ssrURL        string
+	ssrClient     *http.Client
 }
 
 // New function.
@@ -27,7 +30,7 @@ func New(url, rootTemplate, version string) *Inertia {
 	i.rootTemplate = rootTemplate
 	i.version = version
 	i.sharedProps = make(map[string]interface{})
-	i.sharedFuncMap = template.FuncMap{"marshal": marshal}
+	i.sharedFuncMap = template.FuncMap{"marshal": marshal, "raw": raw}
 
 	return i
 }
@@ -38,6 +41,28 @@ func NewWithFS(url, rootTemplate, version string, templateFS fs.FS) *Inertia {
 	i.templateFS = templateFS
 
 	return i
+}
+
+// IsSsrEnabled function.
+func (i *Inertia) IsSsrEnabled() bool {
+	return i.ssrURL != "" && i.ssrClient != nil
+}
+
+// EnableSsr function.
+func (i *Inertia) EnableSsr(ssrURL string) {
+	i.ssrURL = ssrURL
+	i.ssrClient = &http.Client{}
+}
+
+// EnableSsrWithDefault function.
+func (i *Inertia) EnableSsrWithDefault() {
+	i.EnableSsr("http://127.0.0.1:13714")
+}
+
+// DisableSsr function.
+func (i *Inertia) DisableSsr() {
+	i.ssrURL = ""
+	i.ssrClient = nil
 }
 
 // Share function.
@@ -131,7 +156,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 	}
 
-	if r.Header.Get("X-Inertia") != "" {
+	if i.isInertiaRequest(r) {
 		js, err := json.Marshal(page)
 		if err != nil {
 			return err
@@ -165,6 +190,17 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	viewData["page"] = page
 
+	if i.IsSsrEnabled() {
+		ssr, err := i.ssr(page)
+		if err != nil {
+			return err
+		}
+
+		viewData["ssr"] = ssr
+	} else {
+		viewData["ssr"] = nil
+	}
+
 	ts, err := i.createRootTemplate()
 	if err != nil {
 		return err
@@ -181,9 +217,17 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 }
 
 // Location function.
-func (i *Inertia) Location(w http.ResponseWriter, location string) {
-	w.Header().Set("X-Inertia-Location", location)
-	w.WriteHeader(http.StatusConflict)
+func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, url string) {
+	if i.isInertiaRequest(r) {
+		w.Header().Set("X-Inertia-Location", url)
+		w.WriteHeader(http.StatusConflict)
+	} else {
+		http.Redirect(w, r, url, http.StatusFound)
+	}
+}
+
+func (i *Inertia) isInertiaRequest(r *http.Request) bool {
+	return r.Header.Get("X-Inertia") != ""
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
@@ -194,4 +238,42 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	}
 
 	return ts.ParseFiles(i.rootTemplate)
+}
+
+func (i *Inertia) ssr(page *Page) (*Ssr, error) {
+	body, err := json.Marshal(page)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		strings.ReplaceAll(i.ssrURL, "/render", "")+"/render",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := i.ssrClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, ErrBadSsrStatusCode
+	}
+
+	var ssr Ssr
+
+	err = json.NewDecoder(resp.Body).Decode(&ssr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ssr, nil
 }

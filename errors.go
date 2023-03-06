@@ -8,4 +8,7 @@ var (
 
 	// ErrInvalidContextViewData error.
 	ErrInvalidContextViewData = errors.New("inertia: could not convert context view data to map")
+
+	// ErrBadSsrStatusCode error.
+	ErrBadSsrStatusCode = errors.New("inertia: bad ssr status code >= 400")
 )
