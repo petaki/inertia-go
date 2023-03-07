@@ -55,3 +55,17 @@ func TestDisableSsr(t *testing.T) {
 		t.Error("expected: nil, got: *http.Client")
 	}
 }
+
+func TestShare(t *testing.T) {
+	i := New("", "", "")
+	i.Share("title", "Inertia.js Go")
+
+	title, ok := i.sharedProps["title"].(string)
+	if !ok {
+		t.Error("expected: title, got: empty value")
+	}
+
+	if title != "Inertia.js Go" {
+		t.Errorf("expected: Inertia.js Go, got: %s", title)
+	}
+}
