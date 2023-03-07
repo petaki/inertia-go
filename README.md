@@ -134,7 +134,7 @@ mix.options({ manifest: false })
     });
 ```
 
-You can find the example for the SSR based root template below. For more information, please read the official Server-side Rendering documentation.
+You can find the example for the SSR based root template below. For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
 
 ## Examples
 
