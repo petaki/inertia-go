@@ -86,8 +86,6 @@ inertiaManager.EnableSsr("http://ssr-host:13714")
 
 This is a simplified example using Vue 3 and Laravel Mix.
 
-For more information, please read the official documentation.
-
 ```js
 // resources/js/ssr.js
 
@@ -136,7 +134,7 @@ mix.options({ manifest: false })
     });
 ```
 
-You can find the example for the SSR based root template below.
+You can find the example for the SSR based root template below. For more information, please read the official Server-side Rendering documentation.
 
 ## Examples
 
