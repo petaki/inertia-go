@@ -1,6 +1,9 @@
 package inertia
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestEnableSsr(t *testing.T) {
 	i := New("", "", "")
@@ -67,5 +70,59 @@ func TestShare(t *testing.T) {
 
 	if title != "Inertia.js Go" {
 		t.Errorf("expected: Inertia.js Go, got: %s", title)
+	}
+}
+
+func TestShareFunc(t *testing.T) {
+	i := New("", "", "")
+	i.ShareFunc("asset", func(path string) (string, error) {
+		return "/" + path, nil
+	})
+
+	_, ok := i.sharedFuncMap["asset"].(func(string) (string, error))
+	if !ok {
+		t.Error("expected: asset func, got: empty value")
+	}
+}
+
+func TestWithProp(t *testing.T) {
+	ctx := context.TODO()
+
+	i := New("", "", "")
+	ctx = i.WithProp(ctx, "user", "test-user")
+
+	contextProps, ok := ctx.Value(ContextKeyProps).(map[string]interface{})
+	if !ok {
+		t.Error("expected: context props, got: empty value")
+	}
+
+	user, ok := contextProps["user"].(string)
+	if !ok {
+		t.Error("expected: user, got: empty value")
+	}
+
+	if user != "test-user" {
+		t.Errorf("expected: test-user, got: %s", user)
+	}
+}
+
+func TestWithViewData(t *testing.T) {
+	ctx := context.TODO()
+
+	i := New("", "", "")
+	ctx = i.WithViewData(ctx, "meta", "test-meta")
+
+	contextViewData, ok := ctx.Value(ContextKeyViewData).(map[string]interface{})
+	if !ok {
+		t.Error("expected: context view data, got: empty value")
+	}
+
+	meta, ok := contextViewData["meta"].(string)
+	if !ok {
+		t.Error("expected: meta, got: empty value")
+	}
+
+	if meta != "test-meta" {
+		t.Errorf("expected: test-meta, got: %s", meta)
 	}
 }
