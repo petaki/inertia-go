@@ -165,7 +165,7 @@ func authenticate(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         // ...
         
-        ctx := inertiaManager.WithProp(r.Context(), "authUserId", user.Id)
+        ctx := inertiaManager.WithProp(r.Context(), "authUserID", user.ID)
         next.ServeHTTP(w, r.WithContext(ctx))
     })
 }
