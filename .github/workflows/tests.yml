@@ -13,7 +13,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21'
+          go-version: '1.22'
 
       - name: Test
         run: go test -v ./...
@@ -24,5 +24,5 @@ jobs:
       - name: Staticcheck
         uses: dominikh/staticcheck-action@v1.3.0
         with:
-          version: '2023.1.6'
+          version: '2023.1.7'
           install-go: false
