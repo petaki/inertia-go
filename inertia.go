@@ -13,14 +13,15 @@ import (
 
 // Inertia type.
 type Inertia struct {
-	url           string
-	rootTemplate  string
-	version       string
-	sharedProps   map[string]interface{}
-	sharedFuncMap template.FuncMap
-	templateFS    fs.FS
-	ssrURL        string
-	ssrClient     *http.Client
+	url            string
+	rootTemplate   string
+	version        string
+	sharedProps    map[string]interface{}
+	sharedFuncMap  template.FuncMap
+	parsedTemplate *template.Template
+	templateFS     fs.FS
+	ssrURL         string
+	ssrClient      *http.Client
 }
 
 // New function.
@@ -231,13 +232,30 @@ func (i *Inertia) isInertiaRequest(r *http.Request) bool {
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
-	ts := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap)
-
-	if i.templateFS != nil {
-		return ts.ParseFS(i.templateFS, i.rootTemplate)
+	if i.parsedTemplate != nil {
+		return i.parsedTemplate, nil
 	}
 
-	return ts.ParseFiles(i.rootTemplate)
+	ts := template.New(filepath.Base(i.rootTemplate)).Funcs(i.sharedFuncMap)
+
+	var tpl *template.Template
+	var err error
+
+	if i.templateFS != nil {
+		tpl, err = ts.ParseFS(i.templateFS, i.rootTemplate)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tpl, err = ts.ParseFiles(i.rootTemplate)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	i.parsedTemplate = tpl
+
+	return i.parsedTemplate, nil
 }
 
 func (i *Inertia) ssr(page *Page) (*Ssr, error) {
