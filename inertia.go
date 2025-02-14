@@ -115,9 +115,9 @@ func (i *Inertia) WithViewData(ctx context.Context, key string, value interface{
 // Render function.
 func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component string, props map[string]interface{}) error {
 	only := make(map[string]string)
-	partial := r.Header.Get("X-Inertia-Partial-Data")
+	partial := r.Header.Get(HeaderPartialOnly)
 
-	if partial != "" && r.Header.Get("X-Inertia-Partial-Component") == component {
+	if partial != "" && r.Header.Get(HeaderPartialComponent) == component {
 		for _, value := range strings.Split(partial, ",") {
 			only[value] = value
 		}
@@ -164,7 +164,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 
 		w.Header().Set("Vary", "Accept")
-		w.Header().Set("X-Inertia", "true")
+		w.Header().Set(HeaderInertia, "true")
 		w.Header().Set("Content-Type", "application/json")
 
 		_, err = w.Write(js)
@@ -220,7 +220,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 // Location function.
 func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, url string) {
 	if i.isInertiaRequest(r) {
-		w.Header().Set("X-Inertia-Location", url)
+		w.Header().Set(HeaderLocation, url)
 		w.WriteHeader(http.StatusConflict)
 	} else {
 		http.Redirect(w, r, url, http.StatusFound)
@@ -228,7 +228,7 @@ func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, url string) {
 }
 
 func (i *Inertia) isInertiaRequest(r *http.Request) bool {
-	return r.Header.Get("X-Inertia") != ""
+	return r.Header.Get(HeaderInertia) != ""
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
