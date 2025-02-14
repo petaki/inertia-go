@@ -157,7 +157,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 	}
 
-	if i.isInertiaRequest(r) {
+	if r.Header.Get(HeaderInertia) != "" {
 		js, err := json.Marshal(page)
 		if err != nil {
 			return err
@@ -219,16 +219,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 // Location function.
 func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, url string) {
-	if i.isInertiaRequest(r) {
+	if r.Header.Get(HeaderInertia) != "" {
 		w.Header().Set(HeaderLocation, url)
 		w.WriteHeader(http.StatusConflict)
 	} else {
 		http.Redirect(w, r, url, http.StatusFound)
 	}
-}
-
-func (i *Inertia) isInertiaRequest(r *http.Request) bool {
-	return r.Header.Get(HeaderInertia) != ""
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {

@@ -1,9 +1,18 @@
 package inertia
 
 const (
-	HeaderInertia          = "X-Inertia"
-	HeaderLocation         = "X-Inertia-Location"
-	HeaderVersion          = "X-Inertia-Version"
+	// HeaderInertia header.
+	HeaderInertia = "X-Inertia"
+
+	// HeaderLocation header.
+	HeaderLocation = "X-Inertia-Location"
+
+	// HeaderVersion header.
+	HeaderVersion = "X-Inertia-Version"
+
+	// HeaderPartialComponent header.
 	HeaderPartialComponent = "X-Inertia-Partial-Component"
-	HeaderPartialOnly      = "X-Inertia-Partial-Data"
+
+	// HeaderPartialOnly header.
+	HeaderPartialOnly = "X-Inertia-Partial-Data"
 )
