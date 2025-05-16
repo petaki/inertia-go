@@ -183,14 +183,14 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return nil
 	}
 
-	ts, err := i.createRootTemplate()
+	rootTemplate, err := i.createRootTemplate()
 	if err != nil {
 		return err
 	}
 
 	w.Header().Set("Content-Type", "text/html")
 
-	viewData, err := i.createTemplateViewData(r)
+	viewData, err := i.createViewData(r)
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		viewData["ssr"] = nil
 	}
 
-	err = ts.Execute(w, viewData)
+	err = rootTemplate.Execute(w, viewData)
 	if err != nil {
 		return err
 	}
@@ -253,7 +253,7 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	return i.parsedTemplate, nil
 }
 
-func (i *Inertia) createTemplateViewData(r *http.Request) (map[string]interface{}, error) {
+func (i *Inertia) createViewData(r *http.Request) (map[string]interface{}, error) {
 	viewData := make(map[string]interface{})
 
 	for key, value := range i.sharedViewData {
