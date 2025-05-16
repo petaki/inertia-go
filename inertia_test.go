@@ -2,6 +2,9 @@ package inertia
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -138,5 +141,51 @@ func TestWithViewData(t *testing.T) {
 
 	if meta != "test-meta" {
 		t.Errorf("expected: test-meta, got: %s", meta)
+	}
+}
+
+func TestLocation(t *testing.T) {
+	url := "http://inertia-go.test"
+	path := "/dashboard"
+
+	i := New(url, "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	i.Location(w, r, path)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusFound {
+		t.Errorf("expected status code: %d, got: %d", http.StatusFound, resp.StatusCode)
+	}
+
+	loc := resp.Header.Get("Location")
+
+	if loc != path {
+		t.Errorf("expected: %s, got: %s", path, loc)
+	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	w = httptest.NewRecorder()
+
+	i.Location(w, r, path)
+
+	resp = w.Result()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("expected status code: %d, got: %d", http.StatusConflict, resp.StatusCode)
+	}
+
+	loc = resp.Header.Get(HeaderLocation)
+
+	if loc != path {
+		t.Errorf("expected location: %s, got: %s", path, loc)
+	}
+
+	if len(body) != 0 {
+		t.Errorf("expected empty body, got: %s", body)
 	}
 }

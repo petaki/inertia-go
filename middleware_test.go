@@ -16,11 +16,11 @@ func TestMiddlewareWithNormalRequest(t *testing.T) {
 		io.WriteString(w, "handler")
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
 	m := i.Middleware(http.HandlerFunc(ih))
-	m.ServeHTTP(w, req)
+	m.ServeHTTP(w, r)
 
 	resp := w.Result()
 	body, _ := io.ReadAll(resp.Body)
@@ -33,9 +33,9 @@ func TestMiddlewareWithNormalRequest(t *testing.T) {
 		t.Errorf("expected body: handler, got: %s", body)
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/", nil)
+	r = httptest.NewRequest(http.MethodPost, "/", nil)
 	w = httptest.NewRecorder()
-	m.ServeHTTP(w, req)
+	m.ServeHTTP(w, r)
 
 	resp = w.Result()
 	body, _ = io.ReadAll(resp.Body)
@@ -58,13 +58,13 @@ func TestMiddlewareWithInertiaRequest(t *testing.T) {
 		io.WriteString(w, "handler")
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set(HeaderInertia, "true")
-	req.Header.Set(HeaderVersion, "abc123")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderVersion, "abc123")
 	w := httptest.NewRecorder()
 
 	m := i.Middleware(http.HandlerFunc(ih))
-	m.ServeHTTP(w, req)
+	m.ServeHTTP(w, r)
 
 	resp := w.Result()
 	body, _ := io.ReadAll(resp.Body)
@@ -77,12 +77,12 @@ func TestMiddlewareWithInertiaRequest(t *testing.T) {
 		t.Errorf("expected body: handler, got: %s", body)
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/", nil)
-	req.Header.Set(HeaderInertia, "true")
-	req.Header.Set(HeaderVersion, "abc")
+	r = httptest.NewRequest(http.MethodPost, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderVersion, "abc")
 
 	w = httptest.NewRecorder()
-	m.ServeHTTP(w, req)
+	m.ServeHTTP(w, r)
 
 	resp = w.Result()
 	body, _ = io.ReadAll(resp.Body)
@@ -95,12 +95,12 @@ func TestMiddlewareWithInertiaRequest(t *testing.T) {
 		t.Errorf("expected body: handler, got: %s", body)
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set(HeaderInertia, "true")
-	req.Header.Set(HeaderVersion, "abc")
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderVersion, "abc")
 
 	w = httptest.NewRecorder()
-	m.ServeHTTP(w, req)
+	m.ServeHTTP(w, r)
 
 	resp = w.Result()
 	body, _ = io.ReadAll(resp.Body)
