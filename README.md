@@ -169,6 +169,16 @@ func authenticate(next http.Handler) http.Handler {
 }
 ```
 
+### Share data with root template globally
+
+```go
+inertiaManager.ShareViewData("env", "production")
+```
+
+```html
+{{ .env }}
+```
+
 ### Share data with root template
 
 ```go
