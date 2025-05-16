@@ -76,6 +76,7 @@ func (i *Inertia) Share(key string, value interface{}) {
 // ShareFunc function.
 func (i *Inertia) ShareFunc(key string, value interface{}) {
 	i.sharedFuncMap[key] = value
+	i.parsedTemplate = nil
 }
 
 // ShareViewData function.
@@ -97,24 +98,6 @@ func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) c
 	}
 
 	return context.WithValue(ctx, ContextKeyProps, map[string]interface{}{
-		key: value,
-	})
-}
-
-// WithFunc function.
-func (i *Inertia) WithFunc(ctx context.Context, key string, value interface{}) context.Context {
-	contextFuncMap := ctx.Value(ContextKeyFuncMap)
-
-	if contextFuncMap != nil {
-		contextFuncMap, ok := contextFuncMap.(template.FuncMap)
-		if ok {
-			contextFuncMap[key] = value
-
-			return context.WithValue(ctx, ContextKeyFuncMap, contextFuncMap)
-		}
-	}
-
-	return context.WithValue(ctx, ContextKeyFuncMap, template.FuncMap{
 		key: value,
 	})
 }
@@ -200,18 +183,16 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return nil
 	}
 
-	viewData := make(map[string]interface{})
-	contextViewData := r.Context().Value(ContextKeyViewData)
+	ts, err := i.createRootTemplate()
+	if err != nil {
+		return err
+	}
 
-	if contextViewData != nil {
-		contextViewData, ok := contextViewData.(map[string]interface{})
-		if !ok {
-			return ErrInvalidContextViewData
-		}
+	w.Header().Set("Content-Type", "text/html")
 
-		for key, value := range contextViewData {
-			viewData[key] = value
-		}
+	viewData, err := i.createTemplateViewData(r)
+	if err != nil {
+		return err
 	}
 
 	viewData["page"] = page
@@ -226,13 +207,6 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	} else {
 		viewData["ssr"] = nil
 	}
-
-	ts, err := i.createRootTemplate()
-	if err != nil {
-		return err
-	}
-
-	w.Header().Set("Content-Type", "text/html")
 
 	err = ts.Execute(w, viewData)
 	if err != nil {
@@ -277,6 +251,29 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	i.parsedTemplate = tpl
 
 	return i.parsedTemplate, nil
+}
+
+func (i *Inertia) createTemplateViewData(r *http.Request) (map[string]interface{}, error) {
+	viewData := make(map[string]interface{})
+
+	for key, value := range i.sharedViewData {
+		viewData[key] = value
+	}
+
+	contextViewData := r.Context().Value(ContextKeyViewData)
+
+	if contextViewData != nil {
+		contextViewData, ok := contextViewData.(map[string]interface{})
+		if !ok {
+			return nil, ErrInvalidContextViewData
+		}
+
+		for key, value := range contextViewData {
+			viewData[key] = value
+		}
+	}
+
+	return viewData, nil
 }
 
 func (i *Inertia) ssr(page *Page) (*Ssr, error) {
