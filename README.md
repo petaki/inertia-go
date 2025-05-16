@@ -140,23 +140,13 @@ You can find the example for the SSR based root template below. For more informa
 
 The following examples show how to use the package.
 
-### Share a prop globally
+### Share a prop (globally)
 
 ```go
 inertiaManager.Share("title", "Inertia App Title")
 ```
 
-### Share a function with root template
-
-```go
-inertiaManager.ShareFunc("asset", assetFunc)
-```
-
-```html
-<script src="{{ asset "js/app.js" }}"></script>
-```
-
-### Share a prop from middleware
+### Share a prop (context based)
 
 ```go
 func authenticate(next http.Handler) http.Handler {
@@ -169,7 +159,17 @@ func authenticate(next http.Handler) http.Handler {
 }
 ```
 
-### Share data with root template globally
+### Share a function with root template (globally)
+
+```go
+inertiaManager.ShareFunc("asset", assetFunc)
+```
+
+```html
+<script src="{{ asset "js/app.js" }}"></script>
+```
+
+### Share data with root template (globally)
 
 ```go
 inertiaManager.ShareViewData("env", "production")
@@ -179,7 +179,7 @@ inertiaManager.ShareViewData("env", "production")
 {{ .env }}
 ```
 
-### Share data with root template
+### Share data with root template (context based)
 
 ```go
 ctx := inertiaManager.WithViewData(r.Context(), "meta", meta)
