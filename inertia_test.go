@@ -146,46 +146,46 @@ func TestWithViewData(t *testing.T) {
 
 func TestLocation(t *testing.T) {
 	url := "http://inertia-go.test"
-	path := "/dashboard"
+	externalUrl := "http://dashboard.inertia-go.test"
 
 	i := New(url, "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 
-	i.Location(w, r, path)
+	i.Location(w, r, externalUrl)
 
 	resp := w.Result()
 
 	if resp.StatusCode != http.StatusFound {
-		t.Errorf("expected status code: %d, got: %d", http.StatusFound, resp.StatusCode)
+		t.Errorf("externalUrl status code: %d, got: %d", http.StatusFound, resp.StatusCode)
 	}
 
 	loc := resp.Header.Get("Location")
 
-	if loc != path {
-		t.Errorf("expected: %s, got: %s", path, loc)
+	if loc != externalUrl {
+		t.Errorf("externalUrl: %s, got: %s", externalUrl, loc)
 	}
 
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	w = httptest.NewRecorder()
 
-	i.Location(w, r, path)
+	i.Location(w, r, externalUrl)
 
 	resp = w.Result()
 	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusConflict {
-		t.Errorf("expected status code: %d, got: %d", http.StatusConflict, resp.StatusCode)
+		t.Errorf("externalUrl status code: %d, got: %d", http.StatusConflict, resp.StatusCode)
 	}
 
 	loc = resp.Header.Get(HeaderLocation)
 
-	if loc != path {
-		t.Errorf("expected location: %s, got: %s", path, loc)
+	if loc != externalUrl {
+		t.Errorf("externalUrl location: %s, got: %s", externalUrl, loc)
 	}
 
 	if len(body) != 0 {
-		t.Errorf("expected empty body, got: %s", body)
+		t.Errorf("externalUrl empty body, got: %s", body)
 	}
 }
