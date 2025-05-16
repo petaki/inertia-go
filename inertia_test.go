@@ -2,6 +2,7 @@ package inertia
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -141,6 +142,63 @@ func TestWithViewData(t *testing.T) {
 
 	if meta != "test-meta" {
 		t.Errorf("expected: test-meta, got: %s", meta)
+	}
+}
+
+func TestRender(t *testing.T) {
+	url := "http://inertia-go.test"
+	i := New(url, "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]interface{}{
+		"userID": 1,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status code: %d, got: %d", http.StatusOK, resp.StatusCode)
+	}
+
+	if resp.Header.Get("Vary") != "Accept" {
+		t.Errorf("expected: Accept, got: %s", resp.Header.Get("Vary"))
+	}
+
+	if resp.Header.Get(HeaderInertia) != "true" {
+		t.Errorf("expected: true, got: %s", resp.Header.Get(HeaderInertia))
+	}
+
+	if resp.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("expected: application/json, got: %s", resp.Header.Get("Content-Type"))
+	}
+
+	var page Page
+
+	err = json.NewDecoder(resp.Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if page.Component != "test/component" {
+		t.Errorf("expected: test/component, got: %s", page.Component)
+	}
+
+	if page.URL != "/" {
+		t.Errorf("expected: /, got: %s", page.URL)
+	}
+
+	userID, ok := page.Props["userID"].(float64)
+	if !ok {
+		t.Error("expected: userID, got: empty value")
+	}
+
+	if userID != 1 {
+		t.Errorf("expected: 1, got: %.2f", userID)
 	}
 }
 
