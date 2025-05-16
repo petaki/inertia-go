@@ -18,6 +18,7 @@ type Inertia struct {
 	version        string
 	sharedProps    map[string]interface{}
 	sharedFuncMap  template.FuncMap
+	sharedViewData map[string]interface{}
 	parsedTemplate *template.Template
 	templateFS     fs.FS
 	ssrURL         string
@@ -32,6 +33,7 @@ func New(url, rootTemplate, version string) *Inertia {
 	i.version = version
 	i.sharedProps = make(map[string]interface{})
 	i.sharedFuncMap = template.FuncMap{"marshal": marshal, "raw": raw}
+	i.sharedViewData = make(map[string]interface{})
 
 	return i
 }
@@ -76,6 +78,11 @@ func (i *Inertia) ShareFunc(key string, value interface{}) {
 	i.sharedFuncMap[key] = value
 }
 
+// ShareViewData function.
+func (i *Inertia) ShareViewData(key string, value interface{}) {
+	i.sharedViewData[key] = value
+}
+
 // WithProp function.
 func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) context.Context {
 	contextProps := ctx.Value(ContextKeyProps)
@@ -90,6 +97,24 @@ func (i *Inertia) WithProp(ctx context.Context, key string, value interface{}) c
 	}
 
 	return context.WithValue(ctx, ContextKeyProps, map[string]interface{}{
+		key: value,
+	})
+}
+
+// WithFunc function.
+func (i *Inertia) WithFunc(ctx context.Context, key string, value interface{}) context.Context {
+	contextFuncMap := ctx.Value(ContextKeyFuncMap)
+
+	if contextFuncMap != nil {
+		contextFuncMap, ok := contextFuncMap.(template.FuncMap)
+		if ok {
+			contextFuncMap[key] = value
+
+			return context.WithValue(ctx, ContextKeyFuncMap, contextFuncMap)
+		}
+	}
+
+	return context.WithValue(ctx, ContextKeyFuncMap, template.FuncMap{
 		key: value,
 	})
 }

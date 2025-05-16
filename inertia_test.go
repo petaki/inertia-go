@@ -2,6 +2,7 @@ package inertia
 
 import (
 	"context"
+	"html/template"
 	"testing"
 )
 
@@ -85,6 +86,20 @@ func TestShareFunc(t *testing.T) {
 	}
 }
 
+func TestShareViewData(t *testing.T) {
+	i := New("", "", "")
+	i.ShareViewData("env", "production")
+
+	env, ok := i.sharedViewData["env"].(string)
+	if !ok {
+		t.Error("expected: env, got: empty value")
+	}
+
+	if env != "production" {
+		t.Errorf("expected: production, got: %s", env)
+	}
+}
+
 func TestWithProp(t *testing.T) {
 	ctx := context.TODO()
 
@@ -103,6 +118,25 @@ func TestWithProp(t *testing.T) {
 
 	if user != "test-user" {
 		t.Errorf("expected: test-user, got: %s", user)
+	}
+}
+
+func TestWithFunc(t *testing.T) {
+	ctx := context.TODO()
+
+	i := New("", "", "")
+	ctx = i.WithFunc(ctx, "asset", func(path string) (string, error) {
+		return "/" + path, nil
+	})
+
+	contentFuncMap, ok := ctx.Value(ContextKeyFuncMap).(template.FuncMap)
+	if !ok {
+		t.Error("expected: context func map, got: empty value")
+	}
+
+	_, ok = contentFuncMap["asset"].(func(string) (string, error))
+	if !ok {
+		t.Error("expected: asset func, got: empty value")
 	}
 }
 
