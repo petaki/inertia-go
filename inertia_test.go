@@ -157,13 +157,13 @@ func TestLocation(t *testing.T) {
 	resp := w.Result()
 
 	if resp.StatusCode != http.StatusFound {
-		t.Errorf("externalUrl status code: %d, got: %d", http.StatusFound, resp.StatusCode)
+		t.Errorf("expected status code: %d, got: %d", http.StatusFound, resp.StatusCode)
 	}
 
 	loc := resp.Header.Get("Location")
 
 	if loc != externalUrl {
-		t.Errorf("externalUrl: %s, got: %s", externalUrl, loc)
+		t.Errorf("expected: %s, got: %s", externalUrl, loc)
 	}
 
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
@@ -176,16 +176,16 @@ func TestLocation(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusConflict {
-		t.Errorf("externalUrl status code: %d, got: %d", http.StatusConflict, resp.StatusCode)
+		t.Errorf("expected status code: %d, got: %d", http.StatusConflict, resp.StatusCode)
 	}
 
 	loc = resp.Header.Get(HeaderLocation)
 
 	if loc != externalUrl {
-		t.Errorf("externalUrl location: %s, got: %s", externalUrl, loc)
+		t.Errorf("expected location: %s, got: %s", externalUrl, loc)
 	}
 
 	if len(body) != 0 {
-		t.Errorf("externalUrl empty body, got: %s", body)
+		t.Errorf("expected empty body, got: %s", body)
 	}
 }
