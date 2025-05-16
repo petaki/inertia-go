@@ -176,7 +176,9 @@ inertiaManager.ShareViewData("env", "production")
 ```
 
 ```html
-{{ .env }}
+{{ if eq .env "production" }}
+    ...
+{{ end }}
 ```
 
 ### Share data with root template (context based)
