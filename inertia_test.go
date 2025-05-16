@@ -2,6 +2,9 @@ package inertia
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 )
 
@@ -138,5 +141,51 @@ func TestWithViewData(t *testing.T) {
 
 	if meta != "test-meta" {
 		t.Errorf("expected: test-meta, got: %s", meta)
+	}
+}
+
+func TestLocation(t *testing.T) {
+	url := "http://inertia-go.test"
+	externalUrl := "http://dashboard.inertia-go.test"
+
+	i := New(url, "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+
+	i.Location(w, r, externalUrl)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusFound {
+		t.Errorf("externalUrl status code: %d, got: %d", http.StatusFound, resp.StatusCode)
+	}
+
+	loc := resp.Header.Get("Location")
+
+	if loc != externalUrl {
+		t.Errorf("externalUrl: %s, got: %s", externalUrl, loc)
+	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	w = httptest.NewRecorder()
+
+	i.Location(w, r, externalUrl)
+
+	resp = w.Result()
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("externalUrl status code: %d, got: %d", http.StatusConflict, resp.StatusCode)
+	}
+
+	loc = resp.Header.Get(HeaderLocation)
+
+	if loc != externalUrl {
+		t.Errorf("externalUrl location: %s, got: %s", externalUrl, loc)
+	}
+
+	if len(body) != 0 {
+		t.Errorf("externalUrl empty body, got: %s", body)
 	}
 }
