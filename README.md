@@ -1,3 +1,5 @@
+<p align="center"><img src="https://github.com/user-attachments/assets/856bd49b-7bff-4f29-9a9e-fc84e7ab1b49" width="320" alt="Inertia GO"></p>
+
 # Inertia.js Go Adapter
 
 [![Build Status](https://github.com/petaki/inertia-go/workflows/tests/badge.svg)](https://github.com/petaki/inertia-go/actions)
@@ -247,6 +249,10 @@ https://github.com/homettp/homettp
 ### Waterkube
 
 https://github.com/waterkube/waterkube
+
+## Contributors
+
+- [@monstergron](https://github.com/monstergron) for logo ([ArtStation](https://www.artstation.com/danielmakaro))
 
 ## Reporting Issues
 
