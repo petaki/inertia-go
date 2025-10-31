@@ -254,6 +254,7 @@ https://github.com/homettp/homettp
 
 ### Waterkube
 
+<img src="https://github.com/user-attachments/assets/216e9052-4a28-4540-9702-4f039ba0ecda" width="16" alt="Vite"> Vite /
 <img src="https://github.com/user-attachments/assets/5fb47ac4-cac5-4820-9701-8ea48fa426fc" width="16" alt="Vue3"> Vue3
 
 https://github.com/waterkube/waterkube
