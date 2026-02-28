@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/petaki/inertia-go/workflows/tests/badge.svg)](https://github.com/petaki/inertia-go/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE.md)
 
-The Inertia.js server-side adapter for Go. Visit [inertiajs.com](https://inertiajs.com) to learn more.
+An Inertia.js server-side adapter for Go. Visit [inertiajs.com](https://inertiajs.com) to learn more.
 
 ## Installation
 
