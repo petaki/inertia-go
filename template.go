@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func marshal(v interface{}) (template.JS, error) {
+func marshal(v any) (template.JS, error) {
 	js, err := json.Marshal(v)
 	if err != nil {
 		return "", err
@@ -15,7 +15,7 @@ func marshal(v interface{}) (template.JS, error) {
 	return template.JS(js), nil
 }
 
-func raw(v interface{}) (template.HTML, error) {
+func raw(v any) (template.HTML, error) {
 	elems, ok := v.([]string)
 	if ok {
 		html := strings.Join(elems, "\n")

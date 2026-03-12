@@ -11,7 +11,7 @@ func (i *Inertia) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if r.Method == "GET" && r.Header.Get(HeaderVersion) != i.version {
+		if r.Method == http.MethodGet && r.Header.Get(HeaderVersion) != i.version {
 			w.Header().Set(HeaderLocation, i.url+r.RequestURI)
 			w.WriteHeader(http.StatusConflict)
 

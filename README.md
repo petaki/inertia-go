@@ -65,7 +65,7 @@ Or render with props:
 ```go
 // ...
 
-err := inertiaManager.Render(w, r, "home/Index", map[string]interface{}{
+err := inertiaManager.Render(w, r, "home/Index", map[string]any{
     "total": 32,
 })
 
