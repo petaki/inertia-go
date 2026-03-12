@@ -109,7 +109,7 @@ func TestWithProp(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithProp(ctx, "user", "test-user")
 
-	contextProps, ok := ctx.Value(ContextKeyProps).(map[string]interface{})
+	contextProps, ok := ctx.Value(ContextKeyProps).(map[string]any)
 	if !ok {
 		t.Error("expected: context props, got: empty value")
 	}
@@ -130,7 +130,7 @@ func TestWithViewData(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithViewData(ctx, "meta", "test-meta")
 
-	contextViewData, ok := ctx.Value(ContextKeyViewData).(map[string]interface{})
+	contextViewData, ok := ctx.Value(ContextKeyViewData).(map[string]any)
 	if !ok {
 		t.Error("expected: context view data, got: empty value")
 	}
@@ -152,7 +152,7 @@ func TestRender(t *testing.T) {
 	r.Header.Set(HeaderInertia, "true")
 	w := httptest.NewRecorder()
 
-	err := i.Render(w, r, "test/component", map[string]interface{}{
+	err := i.Render(w, r, "test/component", map[string]any{
 		"userID": 1,
 	})
 	if err != nil {
