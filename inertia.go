@@ -10,10 +10,12 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // Inertia type.
 type Inertia struct {
+	mu             sync.RWMutex
 	url            string
 	rootTemplate   string
 	version        string
@@ -70,17 +72,26 @@ func (i *Inertia) DisableSsr() {
 
 // Share function.
 func (i *Inertia) Share(key string, value any) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	i.sharedProps[key] = value
 }
 
 // ShareFunc function.
 func (i *Inertia) ShareFunc(key string, value any) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	i.sharedFuncMap[key] = value
 	i.parsedTemplate = nil
 }
 
 // ShareViewData function.
 func (i *Inertia) ShareViewData(key string, value any) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	i.sharedViewData[key] = value
 }
 
@@ -122,6 +133,9 @@ func (i *Inertia) WithViewData(ctx context.Context, key string, value any) conte
 
 // Render function.
 func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component string, props map[string]any) error {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	only := make(map[string]struct{})
 	partial := r.Header.Get(HeaderPartialOnly)
 

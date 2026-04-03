@@ -103,6 +103,46 @@ func TestShareViewData(t *testing.T) {
 	}
 }
 
+func TestShareConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.Share("key", n)
+		}
+	}()
+
+	for n := range 100 {
+		i.Share("key", n)
+	}
+
+	<-done
+}
+
+func TestShareViewDataConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.ShareViewData("key", n)
+		}
+	}()
+
+	for n := range 100 {
+		i.ShareViewData("key", n)
+	}
+
+	<-done
+}
+
 func TestWithProp(t *testing.T) {
 	ctx := context.TODO()
 
