@@ -175,6 +175,19 @@ r = r.WithContext(ctx)
 <meta name="description" content="{{ .meta }}">
 ```
 
+### Props comparison
+
+| Prop Type | Method | Evaluation | Full Render | Partial Render |
+|-----------|--------|------------|-------------|----------------|
+| Base | `WithProp` | Eager | Included | Included if requested |
+| Deferred | `WithDeferredProp` | Lazy | Excluded (deferred) | Included if requested |
+| Merge | `WithMergeProp` | Lazy | Included | Included if requested |
+| Deep Merge | `WithDeepMergeProp` | Lazy | Included | Included if requested |
+| Prepend | `WithPrependProp` | Lazy | Included | Included if requested |
+| Optional | `WithOptionalProp` | Lazy | Excluded | Included if requested |
+| Always | `WithAlwaysProp` | Lazy | Included | Always included |
+| Once | `WithOnceProp` | Lazy | Included | Excluded if in except-once |
+
 ### Share a prop (globally)
 
 ```go
@@ -199,7 +212,16 @@ func authenticate(next http.Handler) http.Handler {
 ```go
 ctx := inertiaManager.WithDeferredProp(r.Context(), "comments", func() any {
     return getComments()
-}, "default")
+})
+r = r.WithContext(ctx)
+```
+
+### Deferred prop with group (context based)
+
+```go
+ctx := inertiaManager.WithDeferredGroupProp(r.Context(), "comments", func() any {
+    return getComments()
+}, "my-group")
 r = r.WithContext(ctx)
 ```
 
