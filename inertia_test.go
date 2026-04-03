@@ -165,8 +165,13 @@ func TestRender(t *testing.T) {
 		t.Errorf("expected status code: %d, got: %d", http.StatusOK, resp.StatusCode)
 	}
 
-	if resp.Header.Get("Vary") != "Accept" {
-		t.Errorf("expected: Accept, got: %s", resp.Header.Get("Vary"))
+	varyValues := resp.Header.Values("Vary")
+	if len(varyValues) != 1 {
+		t.Errorf("expected 1 Vary value, got: %d", len(varyValues))
+	}
+
+	if varyValues[0] != HeaderInertia {
+		t.Errorf("expected: %s, got: %s", HeaderInertia, varyValues[0])
 	}
 
 	if resp.Header.Get(HeaderInertia) != "true" {

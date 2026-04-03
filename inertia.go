@@ -171,7 +171,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 			return err
 		}
 
-		w.Header().Set("Vary", "Accept")
+		if w.Header().Get("Vary") == "" {
+			w.Header().Set("Vary", HeaderInertia)
+		} else {
+			w.Header().Add("Vary", HeaderInertia)
+		}
+
 		w.Header().Set(HeaderInertia, "true")
 		w.Header().Set("Content-Type", "application/json")
 
