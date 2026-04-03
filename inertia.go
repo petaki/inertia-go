@@ -56,10 +56,6 @@ func (i *Inertia) IsSsrEnabled() bool {
 	return i.isSsrEnabled()
 }
 
-func (i *Inertia) isSsrEnabled() bool {
-	return i.ssrURL != "" && i.ssrClient != nil
-}
-
 // EnableSsr function.
 func (i *Inertia) EnableSsr(ssrURL string) {
 	i.mu.Lock()
@@ -544,6 +540,10 @@ func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
 	maps.Copy(viewData, contextViewData)
 
 	return viewData, nil
+}
+
+func (i *Inertia) isSsrEnabled() bool {
+	return i.ssrURL != "" && i.ssrClient != nil
 }
 
 func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
