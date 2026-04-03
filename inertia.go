@@ -234,16 +234,6 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		Version:   i.version,
 	}
 
-	encryptHistory, ok := r.Context().Value(ContextKeyEncryptHistory).(bool)
-	if ok {
-		page.EncryptHistory = encryptHistory
-	}
-
-	clearHistory, ok := r.Context().Value(ContextKeyClearHistory).(bool)
-	if ok {
-		page.ClearHistory = clearHistory
-	}
-
 	for _, create := range []func(*http.Request, *runtime, *Page) error{
 		i.createBaseProps,
 		i.createDeferredProps,
@@ -258,6 +248,16 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		if err != nil {
 			return err
 		}
+	}
+
+	clearHistory, ok := r.Context().Value(ContextKeyClearHistory).(bool)
+	if ok {
+		page.ClearHistory = clearHistory
+	}
+
+	encryptHistory, ok := r.Context().Value(ContextKeyEncryptHistory).(bool)
+	if ok {
+		page.EncryptHistory = encryptHistory
 	}
 
 	if r.Header.Get(HeaderInertia) != "" {
