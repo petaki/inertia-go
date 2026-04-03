@@ -50,11 +50,21 @@ func NewWithFS(url, rootTemplate, version string, templateFS fs.FS) *Inertia {
 
 // IsSsrEnabled function.
 func (i *Inertia) IsSsrEnabled() bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.isSsrEnabled()
+}
+
+func (i *Inertia) isSsrEnabled() bool {
 	return i.ssrURL != "" && i.ssrClient != nil
 }
 
 // EnableSsr function.
 func (i *Inertia) EnableSsr(ssrURL string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	i.ssrURL = ssrURL
 	i.ssrClient = &http.Client{}
 }
@@ -66,6 +76,9 @@ func (i *Inertia) EnableSsrWithDefault() {
 
 // DisableSsr function.
 func (i *Inertia) DisableSsr() {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	i.ssrURL = ""
 	i.ssrClient = nil
 }
@@ -216,34 +229,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	only := make(map[string]struct{})
-	except := make(map[string]struct{})
-	exceptOnce := make(map[string]struct{})
-	isPartial := false
-
-	if r.Header.Get(HeaderPartialComponent) == component {
-		if partial := r.Header.Get(HeaderPartialOnly); partial != "" {
-			isPartial = true
-
-			for value := range strings.SplitSeq(partial, ",") {
-				only[value] = struct{}{}
-			}
-		}
-
-		if partialExcept := r.Header.Get(HeaderPartialExcept); partialExcept != "" {
-			isPartial = true
-
-			for value := range strings.SplitSeq(partialExcept, ",") {
-				except[value] = struct{}{}
-			}
-		}
-	}
-
-	if exceptOnceHeader := r.Header.Get(HeaderExceptOnceProps); exceptOnceHeader != "" {
-		for value := range strings.SplitSeq(exceptOnceHeader, ",") {
-			exceptOnce[value] = struct{}{}
-		}
-	}
+	rt := newRuntime(r, component, props)
 
 	page := &Page{
 		Component: component,
@@ -252,144 +238,29 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		Version:   i.version,
 	}
 
-	if encryptHistory, ok := r.Context().Value(ContextKeyEncryptHistory).(bool); ok {
+	encryptHistory, ok := r.Context().Value(ContextKeyEncryptHistory).(bool)
+	if ok {
 		page.EncryptHistory = encryptHistory
 	}
 
-	if clearHistory, ok := r.Context().Value(ContextKeyClearHistory).(bool); ok {
+	clearHistory, ok := r.Context().Value(ContextKeyClearHistory).(bool)
+	if ok {
 		page.ClearHistory = clearHistory
 	}
 
-	baseProps, err := i.createProps(r, props)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range baseProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value
-		}
-	}
-
-	deferredProps, err := contextValue[map[string]ContextValueDeferredProp](r.Context(), ContextKeyDeferredProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range deferredProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if isPartial {
-			if _, ok := only[key]; len(only) == 0 || ok {
-				page.Props[key] = value.Value()
-			}
-		} else {
-			if page.DeferredProps == nil {
-				page.DeferredProps = make(map[string][]string)
-			}
-
-			page.DeferredProps[value.Group] = append(page.DeferredProps[value.Group], key)
-		}
-	}
-
-	mergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyMergeProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range mergeProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value()
-			page.MergeProps = append(page.MergeProps, key)
-		}
-	}
-
-	deepMergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyDeepMergeProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range deepMergeProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value()
-			page.DeepMergeProps = append(page.DeepMergeProps, key)
-		}
-	}
-
-	prependProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyPrependProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range prependProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value()
-			page.PrependProps = append(page.PrependProps, key)
-		}
-	}
-
-	optionalProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOptionalProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range optionalProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if isPartial {
-			if _, ok := only[key]; ok {
-				page.Props[key] = value()
-			}
-		}
-	}
-
-	alwaysProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyAlwaysProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range alwaysProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		page.Props[key] = value()
-	}
-
-	onceProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOnceProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range onceProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if _, ok := exceptOnce[key]; !ok {
-			if _, ok := only[key]; len(only) == 0 || ok {
-				page.Props[key] = value()
-			}
+	for _, create := range []func(*http.Request, *runtime, *Page) error{
+		i.createBaseProps,
+		i.createDeferredProps,
+		i.createMergeProps,
+		i.createDeepMergeProps,
+		i.createPrependProps,
+		i.createOptionalProps,
+		i.createAlwaysProps,
+		i.createOnceProps,
+	} {
+		err := create(r, rt, page)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -427,7 +298,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	viewData["page"] = page
 
-	if i.IsSsrEnabled() {
+	if i.isSsrEnabled() {
 		ssr, err := i.ssr(r.Context(), page)
 		if err != nil {
 			return err
@@ -476,18 +347,190 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	return i.parsedTemplate, nil
 }
 
-func (i *Inertia) createProps(r *http.Request, props map[string]any) (map[string]any, error) {
+func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) error {
 	contextProps, err := contextValue[map[string]any](r.Context(), ContextKeyProps)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	baseProps := make(map[string]any)
 	maps.Copy(baseProps, i.sharedProps)
 	maps.Copy(baseProps, contextProps)
-	maps.Copy(baseProps, props)
+	maps.Copy(baseProps, rt.props)
 
-	return baseProps, nil
+	for key, value := range baseProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		_, ok = rt.only[key]
+		if len(rt.only) == 0 || ok {
+			page.Props[key] = value
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) error {
+	deferredProps, err := contextValue[map[string]ContextValueDeferredProp](r.Context(), ContextKeyDeferredProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range deferredProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		if rt.isPartial {
+			_, ok = rt.only[key]
+			if len(rt.only) == 0 || ok {
+				page.Props[key] = value.Value()
+			}
+		} else {
+			if page.DeferredProps == nil {
+				page.DeferredProps = make(map[string][]string)
+			}
+
+			page.DeferredProps[value.Group] = append(page.DeferredProps[value.Group], key)
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createMergeProps(r *http.Request, rt *runtime, page *Page) error {
+	mergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyMergeProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range mergeProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		_, ok = rt.only[key]
+		if len(rt.only) == 0 || ok {
+			page.Props[key] = value()
+			page.MergeProps = append(page.MergeProps, key)
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createDeepMergeProps(r *http.Request, rt *runtime, page *Page) error {
+	deepMergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyDeepMergeProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range deepMergeProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		_, ok = rt.only[key]
+		if len(rt.only) == 0 || ok {
+			page.Props[key] = value()
+			page.DeepMergeProps = append(page.DeepMergeProps, key)
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createPrependProps(r *http.Request, rt *runtime, page *Page) error {
+	prependProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyPrependProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range prependProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		_, ok = rt.only[key]
+		if len(rt.only) == 0 || ok {
+			page.Props[key] = value()
+			page.PrependProps = append(page.PrependProps, key)
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) error {
+	optionalProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOptionalProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range optionalProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		if rt.isPartial {
+			_, ok = rt.only[key]
+			if ok {
+				page.Props[key] = value()
+			}
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) error {
+	alwaysProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyAlwaysProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range alwaysProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		page.Props[key] = value()
+	}
+
+	return nil
+}
+
+func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) error {
+	onceProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOnceProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range onceProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		_, ok = rt.exceptOnce[key]
+		if !ok {
+			_, ok = rt.only[key]
+			if len(rt.only) == 0 || ok {
+				page.Props[key] = value()
+			}
+		}
+	}
+
+	return nil
 }
 
 func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
