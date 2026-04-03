@@ -2,43 +2,67 @@ package inertia
 
 import "context"
 
+const (
+	// ContextKeyFuncMap key.
+	ContextKeyFuncMap = contextKey("funcMap")
+
+	// ContextKeyViewData key.
+	ContextKeyViewData = contextKey("viewData")
+
+	// ContextKeyProps key.
+	ContextKeyProps = contextKey("props")
+
+	// ContextKeyDeferredProps key.
+	ContextKeyDeferredProps = contextKey("deferredProps")
+
+	// ContextKeyMergeProps key.
+	ContextKeyMergeProps = contextKey("mergeProps")
+
+	// ContextKeyDeepMergeProps key.
+	ContextKeyDeepMergeProps = contextKey("deepMergeProps")
+
+	// ContextKeyPrependProps key.
+	ContextKeyPrependProps = contextKey("prependProps")
+
+	// ContextKeyOptionalProps key.
+	ContextKeyOptionalProps = contextKey("optionalProps")
+
+	// ContextKeyAlwaysProps key.
+	ContextKeyAlwaysProps = contextKey("alwaysProps")
+
+	// ContextKeyOnceProps key.
+	ContextKeyOnceProps = contextKey("onceProps")
+
+	// ContextKeyClearHistory key.
+	ContextKeyClearHistory = contextKey("clearHistory")
+
+	// ContextKeyEncryptHistory key.
+	ContextKeyEncryptHistory = contextKey("encryptHistory")
+)
+
 type contextKey string
 
-// ContextKeyFuncMap key.
-const ContextKeyFuncMap = contextKey("funcMap")
+type contextDeferredProp struct {
+	Group string
+	Value func() any
+}
 
-// ContextKeyViewData key.
-const ContextKeyViewData = contextKey("viewData")
+func contextProp[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
+	v := ctx.Value(key)
 
-// ContextKeyProps key.
-const ContextKeyProps = contextKey("props")
+	if v != nil {
+		props, ok := v.(map[string]T)
+		if ok {
+			props[propKey] = value
 
-// ContextKeyDeferredProps key.
-const ContextKeyDeferredProps = contextKey("deferredProps")
+			return context.WithValue(ctx, key, props)
+		}
+	}
 
-// ContextKeyMergeProps key.
-const ContextKeyMergeProps = contextKey("mergeProps")
-
-// ContextKeyDeepMergeProps key.
-const ContextKeyDeepMergeProps = contextKey("deepMergeProps")
-
-// ContextKeyPrependProps key.
-const ContextKeyPrependProps = contextKey("prependProps")
-
-// ContextKeyOptionalProps key.
-const ContextKeyOptionalProps = contextKey("optionalProps")
-
-// ContextKeyAlwaysProps key.
-const ContextKeyAlwaysProps = contextKey("alwaysProps")
-
-// ContextKeyOnceProps key.
-const ContextKeyOnceProps = contextKey("onceProps")
-
-// ContextKeyClearHistory key.
-const ContextKeyClearHistory = contextKey("clearHistory")
-
-// ContextKeyEncryptHistory key.
-const ContextKeyEncryptHistory = contextKey("encryptHistory")
+	return context.WithValue(ctx, key, map[string]T{
+		propKey: value,
+	})
+}
 
 func contextValue[T any](ctx context.Context, key contextKey) (T, error) {
 	v := ctx.Value(key)
@@ -56,10 +80,4 @@ func contextValue[T any](ctx context.Context, key contextKey) (T, error) {
 	}
 
 	return value, nil
-}
-
-// ContextValueDeferredProp type.
-type ContextValueDeferredProp struct {
-	Group string
-	Value func() any
 }

@@ -98,20 +98,7 @@ func (i *Inertia) ShareViewData(key string, value any) {
 
 // WithViewData function.
 func (i *Inertia) WithViewData(ctx context.Context, key string, value any) context.Context {
-	contextViewData := ctx.Value(ContextKeyViewData)
-
-	if contextViewData != nil {
-		contextViewData, ok := contextViewData.(map[string]any)
-		if ok {
-			contextViewData[key] = value
-
-			return context.WithValue(ctx, ContextKeyViewData, contextViewData)
-		}
-	}
-
-	return context.WithValue(ctx, ContextKeyViewData, map[string]any{
-		key: value,
-	})
+	return contextProp(ctx, ContextKeyViewData, key, value)
 }
 
 // Share function.
@@ -124,20 +111,7 @@ func (i *Inertia) Share(key string, value any) {
 
 // WithProp function.
 func (i *Inertia) WithProp(ctx context.Context, key string, value any) context.Context {
-	contextProps := ctx.Value(ContextKeyProps)
-
-	if contextProps != nil {
-		contextProps, ok := contextProps.(map[string]any)
-		if ok {
-			contextProps[key] = value
-
-			return context.WithValue(ctx, ContextKeyProps, contextProps)
-		}
-	}
-
-	return context.WithValue(ctx, ContextKeyProps, map[string]any{
-		key: value,
-	})
+	return contextProp(ctx, ContextKeyProps, key, value)
 }
 
 // WithDeferredProp function.
@@ -147,50 +121,37 @@ func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func()
 
 // WithDeferredGroupProp function.
 func (i *Inertia) WithDeferredGroupProp(ctx context.Context, key string, value func() any, group string) context.Context {
-	props := ctx.Value(ContextKeyDeferredProps)
-
-	if props != nil {
-		props, ok := props.(map[string]ContextValueDeferredProp)
-		if ok {
-			props[key] = ContextValueDeferredProp{Group: group, Value: value}
-
-			return context.WithValue(ctx, ContextKeyDeferredProps, props)
-		}
-	}
-
-	return context.WithValue(ctx, ContextKeyDeferredProps, map[string]ContextValueDeferredProp{
-		key: {Group: group, Value: value},
-	})
+	return contextProp(ctx, ContextKeyDeferredProps, key, contextDeferredProp{Group: group, Value: value})
 }
 
 // WithMergeProp function.
 func (i *Inertia) WithMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyMergeProps, key, value)
+	return contextProp(ctx, ContextKeyMergeProps, key, value)
 }
 
 // WithDeepMergeProp function.
 func (i *Inertia) WithDeepMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyDeepMergeProps, key, value)
+	return contextProp(ctx, ContextKeyDeepMergeProps, key, value)
 }
 
 // WithPrependProp function.
 func (i *Inertia) WithPrependProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyPrependProps, key, value)
+	return contextProp(ctx, ContextKeyPrependProps, key, value)
 }
 
 // WithOptionalProp function.
 func (i *Inertia) WithOptionalProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyOptionalProps, key, value)
+	return contextProp(ctx, ContextKeyOptionalProps, key, value)
 }
 
 // WithAlwaysProp function.
 func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyAlwaysProps, key, value)
+	return contextProp(ctx, ContextKeyAlwaysProps, key, value)
 }
 
 // WithOnceProp function.
 func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyOnceProps, key, value)
+	return contextProp(ctx, ContextKeyOnceProps, key, value)
 }
 
 // WithClearHistory function.
@@ -301,23 +262,6 @@ func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, url string) {
 	}
 }
 
-func (i *Inertia) withLazyProp(ctx context.Context, ctxKey contextKey, key string, value func() any) context.Context {
-	props := ctx.Value(ctxKey)
-
-	if props != nil {
-		props, ok := props.(map[string]func() any)
-		if ok {
-			props[key] = value
-
-			return context.WithValue(ctx, ctxKey, props)
-		}
-	}
-
-	return context.WithValue(ctx, ctxKey, map[string]func() any{
-		key: value,
-	})
-}
-
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	if i.parsedTemplate != nil {
 		return i.parsedTemplate, nil
@@ -370,7 +314,7 @@ func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) erro
 }
 
 func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) error {
-	deferredProps, err := contextValue[map[string]ContextValueDeferredProp](r.Context(), ContextKeyDeferredProps)
+	deferredProps, err := contextValue[map[string]contextDeferredProp](r.Context(), ContextKeyDeferredProps)
 	if err != nil {
 		return err
 	}
