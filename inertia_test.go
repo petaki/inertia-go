@@ -22,6 +22,26 @@ func TestEnableSsr(t *testing.T) {
 	}
 }
 
+func TestEnableSsrConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for range 100 {
+			i.EnableSsr("http://127.0.0.1:13714")
+		}
+	}()
+
+	for range 100 {
+		i.IsSsrEnabled()
+	}
+
+	<-done
+}
+
 func TestEnableSsrWithDefault(t *testing.T) {
 	i := New("", "", "")
 	i.EnableSsrWithDefault()
@@ -63,6 +83,27 @@ func TestDisableSsr(t *testing.T) {
 	}
 }
 
+func TestDisableSsrConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	i.EnableSsrWithDefault()
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for range 100 {
+			i.DisableSsr()
+		}
+	}()
+
+	for range 100 {
+		i.IsSsrEnabled()
+	}
+
+	<-done
+}
+
 func TestShareFunc(t *testing.T) {
 	i := New("", "", "")
 	i.ShareFunc("asset", func(path string) (string, error) {
@@ -73,6 +114,50 @@ func TestShareFunc(t *testing.T) {
 	if !ok {
 		t.Error("expected: asset func, got: empty value")
 	}
+}
+
+func TestShareFuncConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.ShareFunc("key", n)
+		}
+	}()
+
+	for n := range 100 {
+		i.ShareFunc("key", n)
+	}
+
+	<-done
+}
+
+func TestShareFuncAndRenderConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.ShareFunc("key", n)
+		}
+	}()
+
+	for range 100 {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Header.Set(HeaderInertia, "true")
+		w := httptest.NewRecorder()
+
+		i.Render(w, r, "test/component", nil)
+	}
+
+	<-done
 }
 
 func TestShareViewData(t *testing.T) {
@@ -104,6 +189,30 @@ func TestShareViewDataConcurrent(t *testing.T) {
 
 	for n := range 100 {
 		i.ShareViewData("key", n)
+	}
+
+	<-done
+}
+
+func TestShareViewDataAndRenderConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.ShareViewData("key", n)
+		}
+	}()
+
+	for range 100 {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Header.Set(HeaderInertia, "true")
+		w := httptest.NewRecorder()
+
+		i.Render(w, r, "test/component", nil)
 	}
 
 	<-done
@@ -159,6 +268,30 @@ func TestShareConcurrent(t *testing.T) {
 
 	for n := range 100 {
 		i.Share("key", n)
+	}
+
+	<-done
+}
+
+func TestShareAndRenderConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.Share("key", n)
+		}
+	}()
+
+	for range 100 {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Header.Set(HeaderInertia, "true")
+		w := httptest.NewRecorder()
+
+		i.Render(w, r, "test/component", nil)
 	}
 
 	<-done
