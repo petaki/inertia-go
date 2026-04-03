@@ -63,20 +63,6 @@ func TestDisableSsr(t *testing.T) {
 	}
 }
 
-func TestShare(t *testing.T) {
-	i := New("", "", "")
-	i.Share("title", "Inertia.js Go")
-
-	title, ok := i.sharedProps["title"].(string)
-	if !ok {
-		t.Error("expected: title, got: empty value")
-	}
-
-	if title != "Inertia.js Go" {
-		t.Errorf("expected: Inertia.js Go, got: %s", title)
-	}
-}
-
 func TestShareFunc(t *testing.T) {
 	i := New("", "", "")
 	i.ShareFunc("asset", func(path string) (string, error) {
@@ -103,26 +89,6 @@ func TestShareViewData(t *testing.T) {
 	}
 }
 
-func TestShareConcurrent(t *testing.T) {
-	i := New("http://inertia-go.test", "", "")
-
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-
-		for n := range 100 {
-			i.Share("key", n)
-		}
-	}()
-
-	for n := range 100 {
-		i.Share("key", n)
-	}
-
-	<-done
-}
-
 func TestShareViewDataConcurrent(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 
@@ -138,6 +104,61 @@ func TestShareViewDataConcurrent(t *testing.T) {
 
 	for n := range 100 {
 		i.ShareViewData("key", n)
+	}
+
+	<-done
+}
+
+func TestWithViewData(t *testing.T) {
+	ctx := context.TODO()
+
+	i := New("", "", "")
+	ctx = i.WithViewData(ctx, "meta", "test-meta")
+
+	contextViewData, ok := ctx.Value(ContextKeyViewData).(map[string]any)
+	if !ok {
+		t.Error("expected: context view data, got: empty value")
+	}
+
+	meta, ok := contextViewData["meta"].(string)
+	if !ok {
+		t.Error("expected: meta, got: empty value")
+	}
+
+	if meta != "test-meta" {
+		t.Errorf("expected: test-meta, got: %s", meta)
+	}
+}
+
+func TestShare(t *testing.T) {
+	i := New("", "", "")
+	i.Share("title", "Inertia.js Go")
+
+	title, ok := i.sharedProps["title"].(string)
+	if !ok {
+		t.Error("expected: title, got: empty value")
+	}
+
+	if title != "Inertia.js Go" {
+		t.Errorf("expected: Inertia.js Go, got: %s", title)
+	}
+}
+
+func TestShareConcurrent(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for n := range 100 {
+			i.Share("key", n)
+		}
+	}()
+
+	for n := range 100 {
+		i.Share("key", n)
 	}
 
 	<-done
@@ -161,27 +182,6 @@ func TestWithProp(t *testing.T) {
 
 	if user != "test-user" {
 		t.Errorf("expected: test-user, got: %s", user)
-	}
-}
-
-func TestWithViewData(t *testing.T) {
-	ctx := context.TODO()
-
-	i := New("", "", "")
-	ctx = i.WithViewData(ctx, "meta", "test-meta")
-
-	contextViewData, ok := ctx.Value(ContextKeyViewData).(map[string]any)
-	if !ok {
-		t.Error("expected: context view data, got: empty value")
-	}
-
-	meta, ok := contextViewData["meta"].(string)
-	if !ok {
-		t.Error("expected: meta, got: empty value")
-	}
-
-	if meta != "test-meta" {
-		t.Errorf("expected: test-meta, got: %s", meta)
 	}
 }
 
@@ -244,6 +244,373 @@ func TestRender(t *testing.T) {
 
 	if userID != 1 {
 		t.Errorf("expected: 1, got: %.2f", userID)
+	}
+}
+
+func TestRenderWithDeferredProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} }, "")
+	ctx = i.WithDeferredProp(ctx, "sidebar", func() any { return "side" }, "sidebar")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["comments"]; ok {
+		t.Error("expected deferred prop comments to be excluded from props")
+	}
+
+	if _, ok := page.Props["sidebar"]; ok {
+		t.Error("expected deferred prop sidebar to be excluded from props")
+	}
+
+	if page.Props["title"] != "Test" {
+		t.Errorf("expected: Test, got: %s", page.Props["title"])
+	}
+
+	if len(page.DeferredProps["default"]) != 1 || page.DeferredProps["default"][0] != "comments" {
+		t.Errorf("expected deferred default group [comments], got: %v", page.DeferredProps["default"])
+	}
+
+	if len(page.DeferredProps["sidebar"]) != 1 || page.DeferredProps["sidebar"][0] != "sidebar" {
+		t.Errorf("expected deferred sidebar group [sidebar], got: %v", page.DeferredProps["sidebar"])
+	}
+}
+
+func TestRenderWithDeferredPropPartialReload(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "comments")
+	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} }, "")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	comments, ok := page.Props["comments"]
+	if !ok {
+		t.Error("expected comments to be resolved on partial reload")
+	}
+
+	items, ok := comments.([]any)
+	if !ok || len(items) != 2 {
+		t.Errorf("expected [a b], got: %v", comments)
+	}
+
+	if _, ok := page.Props["title"]; ok {
+		t.Error("expected title to be excluded from partial reload")
+	}
+}
+
+func TestRenderWithMergeProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithMergeProp(r.Context(), "results", func() any { return []int{1, 2} })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["results"]; !ok {
+		t.Error("expected results prop to be resolved")
+	}
+
+	if len(page.MergeProps) != 1 || page.MergeProps[0] != "results" {
+		t.Errorf("expected mergeProps [results], got: %v", page.MergeProps)
+	}
+}
+
+func TestRenderWithDeepMergeProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithDeepMergeProp(r.Context(), "settings", func() any { return map[string]string{"theme": "dark"} })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["settings"]; !ok {
+		t.Error("expected settings prop to be resolved")
+	}
+
+	if len(page.DeepMergeProps) != 1 || page.DeepMergeProps[0] != "settings" {
+		t.Errorf("expected deepMergeProps [settings], got: %v", page.DeepMergeProps)
+	}
+}
+
+func TestRenderWithPrependProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithPrependProp(r.Context(), "notifications", func() any { return []string{"new"} })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["notifications"]; !ok {
+		t.Error("expected notifications prop to be resolved")
+	}
+
+	if len(page.PrependProps) != 1 || page.PrependProps[0] != "notifications" {
+		t.Errorf("expected prependProps [notifications], got: %v", page.PrependProps)
+	}
+}
+
+func TestRenderWithOptionalProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["extra"]; ok {
+		t.Error("expected optional prop to be excluded from full load")
+	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "extra")
+	ctx = i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" })
+	r = r.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page2 Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if page2.Props["extra"] != "opt" {
+		t.Errorf("expected: opt, got: %v", page2.Props["extra"])
+	}
+}
+
+func TestRenderWithAlwaysProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "title")
+	ctx := i.WithAlwaysProp(r.Context(), "errors", func() any { return map[string]string{} })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["errors"]; !ok {
+		t.Error("expected always prop to be included even when not requested")
+	}
+}
+
+func TestRenderWithOnceProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderExceptOnceProps, "plans")
+	ctx := i.WithOnceProp(r.Context(), "plans", func() any { return []string{"free", "pro"} })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["plans"]; ok {
+		t.Error("expected once prop to be excluded when listed in except-once header")
+	}
+
+	if page.Props["title"] != "Test" {
+		t.Errorf("expected: Test, got: %v", page.Props["title"])
+	}
+}
+
+func TestRenderWithPartialExcept(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialExcept, "secret")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title":  "Test",
+		"secret": "hidden",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["secret"]; ok {
+		t.Error("expected excluded prop to be absent")
+	}
+
+	if page.Props["title"] != "Test" {
+		t.Errorf("expected: Test, got: %v", page.Props["title"])
+	}
+}
+
+func TestRenderWithClearHistory(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithClearHistory(r.Context())
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !page.ClearHistory {
+		t.Error("expected clearHistory to be true")
+	}
+}
+
+func TestRenderWithEncryptHistory(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithEncryptHistory(r.Context())
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !page.EncryptHistory {
+		t.Error("expected encryptHistory to be true")
 	}
 }
 
