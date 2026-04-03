@@ -190,7 +190,7 @@ r = r.WithContext(ctx)
 
 | Prop Type | Method | Evaluation | Full Render | Partial Render |
 |-----------|--------|------------|-------------|----------------|
-| Base | `WithProp` | Eager | Included | Included if requested |
+| Base | `Share` / `WithProp` / `Render` | Eager | Included | Included if requested |
 | Deferred | `WithDeferredProp` | Lazy | Excluded (deferred) | Included if requested |
 | Merge | `WithMergeProp` | Lazy | Included | Included if requested |
 | Deep Merge | `WithDeepMergeProp` | Lazy | Included | Included if requested |
