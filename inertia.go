@@ -193,23 +193,6 @@ func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any
 	return i.withLazyProp(ctx, ContextKeyOnceProps, key, value)
 }
 
-func (i *Inertia) withLazyProp(ctx context.Context, ctxKey contextKey, key string, value func() any) context.Context {
-	props := ctx.Value(ctxKey)
-
-	if props != nil {
-		props, ok := props.(map[string]func() any)
-		if ok {
-			props[key] = value
-
-			return context.WithValue(ctx, ctxKey, props)
-		}
-	}
-
-	return context.WithValue(ctx, ctxKey, map[string]func() any{
-		key: value,
-	})
-}
-
 // WithClearHistory function.
 func (i *Inertia) WithClearHistory(ctx context.Context) context.Context {
 	return context.WithValue(ctx, ContextKeyClearHistory, true)
@@ -316,6 +299,23 @@ func (i *Inertia) Location(w http.ResponseWriter, r *http.Request, url string) {
 	} else {
 		http.Redirect(w, r, url, http.StatusFound)
 	}
+}
+
+func (i *Inertia) withLazyProp(ctx context.Context, ctxKey contextKey, key string, value func() any) context.Context {
+	props := ctx.Value(ctxKey)
+
+	if props != nil {
+		props, ok := props.(map[string]func() any)
+		if ok {
+			props[key] = value
+
+			return context.WithValue(ctx, ctxKey, props)
+		}
+	}
+
+	return context.WithValue(ctx, ctxKey, map[string]func() any{
+		key: value,
+	})
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
