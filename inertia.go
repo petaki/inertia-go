@@ -132,71 +132,72 @@ func (i *Inertia) WithProp(ctx context.Context, key string, value any) context.C
 }
 
 // WithDeferredProp function.
-func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func() any, group string) context.Context {
-	if group == "" {
-		group = "default"
-	}
+func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func() any) context.Context {
+	return i.WithDeferredGroupProp(ctx, key, value, "default")
+}
 
+// WithDeferredGroupProp function.
+func (i *Inertia) WithDeferredGroupProp(ctx context.Context, key string, value func() any, group string) context.Context {
 	props := ctx.Value(ContextKeyDeferredProps)
 
 	if props != nil {
-		props, ok := props.(map[string]ContextEntryDeferredProp)
+		props, ok := props.(map[string]ContextValueDeferredProp)
 		if ok {
-			props[key] = ContextEntryDeferredProp{Group: group, Value: value}
+			props[key] = ContextValueDeferredProp{Group: group, Value: value}
 
 			return context.WithValue(ctx, ContextKeyDeferredProps, props)
 		}
 	}
 
-	return context.WithValue(ctx, ContextKeyDeferredProps, map[string]ContextEntryDeferredProp{
+	return context.WithValue(ctx, ContextKeyDeferredProps, map[string]ContextValueDeferredProp{
 		key: {Group: group, Value: value},
 	})
 }
 
 // WithMergeProp function.
 func (i *Inertia) WithMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyMergeProps, key, ContextEntryLazyProp{Value: value})
+	return i.withLazyProp(ctx, ContextKeyMergeProps, key, value)
 }
 
 // WithDeepMergeProp function.
 func (i *Inertia) WithDeepMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyDeepMergeProps, key, ContextEntryLazyProp{Value: value})
+	return i.withLazyProp(ctx, ContextKeyDeepMergeProps, key, value)
 }
 
 // WithPrependProp function.
 func (i *Inertia) WithPrependProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyPrependProps, key, ContextEntryLazyProp{Value: value})
+	return i.withLazyProp(ctx, ContextKeyPrependProps, key, value)
 }
 
 // WithOptionalProp function.
 func (i *Inertia) WithOptionalProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyOptionalProps, key, ContextEntryLazyProp{Value: value})
+	return i.withLazyProp(ctx, ContextKeyOptionalProps, key, value)
 }
 
 // WithAlwaysProp function.
 func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyAlwaysProps, key, ContextEntryLazyProp{Value: value})
+	return i.withLazyProp(ctx, ContextKeyAlwaysProps, key, value)
 }
 
 // WithOnceProp function.
 func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.withLazyProp(ctx, ContextKeyOnceProps, key, ContextEntryLazyProp{Value: value})
+	return i.withLazyProp(ctx, ContextKeyOnceProps, key, value)
 }
 
-func (i *Inertia) withLazyProp(ctx context.Context, ctxKey contextKey, key string, entry ContextEntryLazyProp) context.Context {
+func (i *Inertia) withLazyProp(ctx context.Context, ctxKey contextKey, key string, value func() any) context.Context {
 	props := ctx.Value(ctxKey)
 
 	if props != nil {
-		props, ok := props.(map[string]ContextEntryLazyProp)
+		props, ok := props.(map[string]func() any)
 		if ok {
-			props[key] = entry
+			props[key] = value
 
 			return context.WithValue(ctx, ctxKey, props)
 		}
 	}
 
-	return context.WithValue(ctx, ctxKey, map[string]ContextEntryLazyProp{
-		key: entry,
+	return context.WithValue(ctx, ctxKey, map[string]func() any{
+		key: value,
 	})
 }
 
@@ -259,32 +260,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		page.ClearHistory = clearHistory
 	}
 
-	allProps := make(map[string]any)
-
-	maps.Copy(allProps, i.sharedProps)
-
-	contextProps := r.Context().Value(ContextKeyProps)
-
-	if contextProps != nil {
-		contextProps, ok := contextProps.(map[string]any)
-		if !ok {
-			return ErrInvalidContextProps
-		}
-
-		maps.Copy(allProps, contextProps)
+	baseProps, err := i.createProps(r, props)
+	if err != nil {
+		return err
 	}
 
-	maps.Copy(allProps, props)
-
-	deferredProps, _ := r.Context().Value(ContextKeyDeferredProps).(map[string]ContextEntryDeferredProp)
-	mergeProps, _ := r.Context().Value(ContextKeyMergeProps).(map[string]ContextEntryLazyProp)
-	prependProps, _ := r.Context().Value(ContextKeyPrependProps).(map[string]ContextEntryLazyProp)
-	deepMergeProps, _ := r.Context().Value(ContextKeyDeepMergeProps).(map[string]ContextEntryLazyProp)
-	optionalProps, _ := r.Context().Value(ContextKeyOptionalProps).(map[string]ContextEntryLazyProp)
-	alwaysProps, _ := r.Context().Value(ContextKeyAlwaysProps).(map[string]ContextEntryLazyProp)
-	onceProps, _ := r.Context().Value(ContextKeyOnceProps).(map[string]ContextEntryLazyProp)
-
-	for key, value := range allProps {
+	for key, value := range baseProps {
 		if _, ok := except[key]; ok {
 			continue
 		}
@@ -294,22 +275,32 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 	}
 
-	for key, entry := range deferredProps {
+	deferredProps, err := contextValue[map[string]ContextValueDeferredProp](r.Context(), ContextKeyDeferredProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range deferredProps {
 		if _, ok := except[key]; ok {
 			continue
 		}
 
 		if isPartial {
 			if _, ok := only[key]; len(only) == 0 || ok {
-				page.Props[key] = entry.Value()
+				page.Props[key] = value.Value()
 			}
 		} else {
 			if page.DeferredProps == nil {
 				page.DeferredProps = make(map[string][]string)
 			}
 
-			page.DeferredProps[entry.Group] = append(page.DeferredProps[entry.Group], key)
+			page.DeferredProps[value.Group] = append(page.DeferredProps[value.Group], key)
 		}
+	}
+
+	mergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyMergeProps)
+	if err != nil {
+		return err
 	}
 
 	for key, value := range mergeProps {
@@ -318,20 +309,14 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 
 		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value.Value()
+			page.Props[key] = value()
 			page.MergeProps = append(page.MergeProps, key)
 		}
 	}
 
-	for key, value := range prependProps {
-		if _, ok := except[key]; ok {
-			continue
-		}
-
-		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value.Value()
-			page.PrependProps = append(page.PrependProps, key)
-		}
+	deepMergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyDeepMergeProps)
+	if err != nil {
+		return err
 	}
 
 	for key, value := range deepMergeProps {
@@ -340,9 +325,30 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 
 		if _, ok := only[key]; len(only) == 0 || ok {
-			page.Props[key] = value.Value()
+			page.Props[key] = value()
 			page.DeepMergeProps = append(page.DeepMergeProps, key)
 		}
+	}
+
+	prependProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyPrependProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range prependProps {
+		if _, ok := except[key]; ok {
+			continue
+		}
+
+		if _, ok := only[key]; len(only) == 0 || ok {
+			page.Props[key] = value()
+			page.PrependProps = append(page.PrependProps, key)
+		}
+	}
+
+	optionalProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOptionalProps)
+	if err != nil {
+		return err
 	}
 
 	for key, value := range optionalProps {
@@ -352,9 +358,14 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 		if isPartial {
 			if _, ok := only[key]; ok {
-				page.Props[key] = value.Value()
+				page.Props[key] = value()
 			}
 		}
+	}
+
+	alwaysProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyAlwaysProps)
+	if err != nil {
+		return err
 	}
 
 	for key, value := range alwaysProps {
@@ -362,7 +373,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 			continue
 		}
 
-		page.Props[key] = value.Value()
+		page.Props[key] = value()
+	}
+
+	onceProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOnceProps)
+	if err != nil {
+		return err
 	}
 
 	for key, value := range onceProps {
@@ -372,7 +388,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 		if _, ok := exceptOnce[key]; !ok {
 			if _, ok := only[key]; len(only) == 0 || ok {
-				page.Props[key] = value.Value()
+				page.Props[key] = value()
 			}
 		}
 	}
@@ -460,20 +476,29 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	return i.parsedTemplate, nil
 }
 
+func (i *Inertia) createProps(r *http.Request, props map[string]any) (map[string]any, error) {
+	contextProps, err := contextValue[map[string]any](r.Context(), ContextKeyProps)
+	if err != nil {
+		return nil, err
+	}
+
+	baseProps := make(map[string]any)
+	maps.Copy(baseProps, i.sharedProps)
+	maps.Copy(baseProps, contextProps)
+	maps.Copy(baseProps, props)
+
+	return baseProps, nil
+}
+
 func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
+	contextViewData, err := contextValue[map[string]any](r.Context(), ContextKeyViewData)
+	if err != nil {
+		return nil, err
+	}
+
 	viewData := make(map[string]any, len(i.sharedViewData))
 	maps.Copy(viewData, i.sharedViewData)
-
-	contextViewData := r.Context().Value(ContextKeyViewData)
-
-	if contextViewData != nil {
-		contextViewData, ok := contextViewData.(map[string]any)
-		if !ok {
-			return nil, ErrInvalidContextViewData
-		}
-
-		maps.Copy(viewData, contextViewData)
-	}
+	maps.Copy(viewData, contextViewData)
 
 	return viewData, nil
 }

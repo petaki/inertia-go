@@ -251,8 +251,8 @@ func TestRenderWithDeferredProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
-	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} }, "")
-	ctx = i.WithDeferredProp(ctx, "sidebar", func() any { return "side" }, "sidebar")
+	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} })
+	ctx = i.WithDeferredGroupProp(ctx, "sidebar", func() any { return "side" }, "sidebar")
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -297,7 +297,7 @@ func TestRenderWithDeferredPropPartialReload(t *testing.T) {
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderPartialComponent, "test/component")
 	r.Header.Set(HeaderPartialOnly, "comments")
-	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} }, "")
+	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} })
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 

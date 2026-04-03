@@ -1,5 +1,7 @@
 package inertia
 
+import "context"
+
 type contextKey string
 
 // ContextKeyFuncMap key.
@@ -38,13 +40,26 @@ const ContextKeyClearHistory = contextKey("clearHistory")
 // ContextKeyEncryptHistory key.
 const ContextKeyEncryptHistory = contextKey("encryptHistory")
 
-// ContextEntryDeferredProp type.
-type ContextEntryDeferredProp struct {
-	Group string
-	Value func() any
+func contextValue[T any](ctx context.Context, key contextKey) (T, error) {
+	v := ctx.Value(key)
+	if v == nil {
+		var zero T
+
+		return zero, nil
+	}
+
+	value, ok := v.(T)
+	if !ok {
+		var zero T
+
+		return zero, ErrInvalidContextValue
+	}
+
+	return value, nil
 }
 
-// ContextEntryLazyProp type.
-type ContextEntryLazyProp struct {
+// ContextValueDeferredProp type.
+type ContextValueDeferredProp struct {
+	Group string
 	Value func() any
 }
