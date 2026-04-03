@@ -194,6 +194,83 @@ r = r.WithContext(ctx)
 <meta name="description" content="{{ .meta }}">
 ```
 
+### Deferred prop (context based)
+
+```go
+ctx := inertiaManager.WithDeferredProp(r.Context(), "comments", func() any {
+    return getComments()
+}, "default")
+r = r.WithContext(ctx)
+```
+
+### Merge prop (context based)
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "results", func() any {
+    return getResults()
+})
+r = r.WithContext(ctx)
+```
+
+### Deep merge prop (context based)
+
+```go
+ctx := inertiaManager.WithDeepMergeProp(r.Context(), "settings", func() any {
+    return getSettings()
+})
+r = r.WithContext(ctx)
+```
+
+### Prepend prop (context based)
+
+```go
+ctx := inertiaManager.WithPrependProp(r.Context(), "notifications", func() any {
+    return getNotifications()
+})
+r = r.WithContext(ctx)
+```
+
+### Optional prop (context based)
+
+```go
+ctx := inertiaManager.WithOptionalProp(r.Context(), "extra", func() any {
+    return getExtra()
+})
+r = r.WithContext(ctx)
+```
+
+### Always prop (context based)
+
+```go
+ctx := inertiaManager.WithAlwaysProp(r.Context(), "errors", func() any {
+    return getErrors()
+})
+r = r.WithContext(ctx)
+```
+
+### Once prop (context based)
+
+```go
+ctx := inertiaManager.WithOnceProp(r.Context(), "plans", func() any {
+    return getPlans()
+})
+r = r.WithContext(ctx)
+```
+
+### Clear history (context based)
+
+```go
+ctx := inertiaManager.WithClearHistory(r.Context())
+r = r.WithContext(ctx)
+```
+
+### Encrypt history (context based)
+
+```go
+ctx := inertiaManager.WithEncryptHistory(r.Context())
+r = r.WithContext(ctx)
+```
+
 ### Root template
 
 ```html
@@ -206,7 +283,8 @@ r = r.WithContext(ctx)
         <link rel="icon" type="image/x-icon" href="favicon.ico">
     </head>
     <body>
-        <div id="app" data-page="{{ marshal .page }}"></div>
+        <script data-page="app" type="application/json">{{ marshal .page }}</script>
+        <div id="app"></div>
         <script src="js/app.js"></script>
     </body>
 </html>
@@ -228,13 +306,15 @@ r = r.WithContext(ctx)
     </head>
     <body>
         {{ if not .ssr }}
-            <div id="app" data-page="{{ marshal .page }}"></div>
+            <script data-page="app" type="application/json">{{ marshal .page }}</script>
+            <div id="app"></div>
         {{ else }}
             {{ raw .ssr.Body }}
         {{ end }}
     </body>
 </html>
 ```
+
 
 ## Example Apps
 
