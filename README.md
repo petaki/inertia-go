@@ -37,7 +37,7 @@ var templateFS embed.FS
 
 // ...
 
-inertiaManager := inertia.NewWithFS(url, rootTemplate, version, templateFS)
+inertiaManager := inertia.New(url, rootTemplate, version, templateFS)
 ```
 
 ### 2. Register the middleware
@@ -84,6 +84,17 @@ Or with custom url:
 
 ```go
 inertiaManager.EnableSsr("http://ssr-host:13714")
+```
+
+You can also provide a custom `*http.Client`:
+
+```go
+client := &http.Client{
+    Timeout: 10 * time.Second,
+}
+
+inertiaManager.EnableSsr("http://ssr-host:13714", client)
+inertiaManager.EnableSsrWithDefault(client)
 ```
 
 This is a simplified example using Vue 3 and Laravel Mix.
@@ -219,7 +230,7 @@ r = r.WithContext(ctx)
 ### Deferred prop with group (context based)
 
 ```go
-ctx := inertiaManager.WithDeferredGroupProp(r.Context(), "comments", func() any {
+ctx := inertiaManager.WithDeferredProp(r.Context(), "comments", func() any {
     return getComments()
 }, "my-group")
 r = r.WithContext(ctx)

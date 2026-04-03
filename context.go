@@ -47,24 +47,7 @@ type contextDeferredProp struct {
 	Value func() any
 }
 
-func contextProp[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
-	v := ctx.Value(key)
-
-	if v != nil {
-		props, ok := v.(map[string]T)
-		if ok {
-			props[propKey] = value
-
-			return context.WithValue(ctx, key, props)
-		}
-	}
-
-	return context.WithValue(ctx, key, map[string]T{
-		propKey: value,
-	})
-}
-
-func contextValue[T any](ctx context.Context, key contextKey) (T, error) {
+func contextGet[T any](ctx context.Context, key contextKey) (T, error) {
 	v := ctx.Value(key)
 	if v == nil {
 		var zero T
@@ -80,4 +63,21 @@ func contextValue[T any](ctx context.Context, key contextKey) (T, error) {
 	}
 
 	return value, nil
+}
+
+func contextSet[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
+	v := ctx.Value(key)
+
+	if v != nil {
+		props, ok := v.(map[string]T)
+		if ok {
+			props[propKey] = value
+
+			return context.WithValue(ctx, key, props)
+		}
+	}
+
+	return context.WithValue(ctx, key, map[string]T{
+		propKey: value,
+	})
 }

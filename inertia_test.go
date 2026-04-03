@@ -22,6 +22,20 @@ func TestEnableSsr(t *testing.T) {
 	}
 }
 
+func TestEnableSsrWithClient(t *testing.T) {
+	i := New("", "", "")
+	client := &http.Client{}
+	i.EnableSsr("ssr.test", client)
+
+	if i.ssrURL != "ssr.test" {
+		t.Errorf("expected: ssr.test, got: %v", i.ssrURL)
+	}
+
+	if i.ssrClient != client {
+		t.Error("expected: custom *http.Client, got: different client")
+	}
+}
+
 func TestEnableSsrConcurrent(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 
@@ -52,6 +66,20 @@ func TestEnableSsrWithDefault(t *testing.T) {
 
 	if i.ssrClient == nil {
 		t.Error("expected: *http.Client, got: nil")
+	}
+}
+
+func TestEnableSsrWithDefaultWithClient(t *testing.T) {
+	i := New("", "", "")
+	client := &http.Client{}
+	i.EnableSsrWithDefault(client)
+
+	if i.ssrURL != "http://127.0.0.1:13714" {
+		t.Errorf("expected: http://127.0.0.1:13714, got: %v", i.ssrURL)
+	}
+
+	if i.ssrClient != client {
+		t.Error("expected: custom *http.Client, got: different client")
 	}
 }
 
@@ -385,7 +413,7 @@ func TestRenderWithDeferredProp(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} })
-	ctx = i.WithDeferredGroupProp(ctx, "sidebar", func() any { return "side" }, "sidebar")
+	ctx = i.WithDeferredProp(ctx, "sidebar", func() any { return "side" }, "sidebar")
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 

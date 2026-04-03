@@ -29,8 +29,8 @@ type Inertia struct {
 }
 
 // New function.
-func New(url, rootTemplate, version string) *Inertia {
-	return &Inertia{
+func New(url, rootTemplate, version string, templateFS ...fs.FS) *Inertia {
+	i := &Inertia{
 		url:            url,
 		rootTemplate:   rootTemplate,
 		version:        version,
@@ -38,12 +38,10 @@ func New(url, rootTemplate, version string) *Inertia {
 		sharedFuncMap:  template.FuncMap{"marshal": marshal, "raw": raw},
 		sharedViewData: make(map[string]any),
 	}
-}
 
-// NewWithFS function.
-func NewWithFS(url, rootTemplate, version string, templateFS fs.FS) *Inertia {
-	i := New(url, rootTemplate, version)
-	i.templateFS = templateFS
+	if len(templateFS) > 0 && templateFS[0] != nil {
+		i.templateFS = templateFS[0]
+	}
 
 	return i
 }
@@ -57,17 +55,22 @@ func (i *Inertia) IsSsrEnabled() bool {
 }
 
 // EnableSsr function.
-func (i *Inertia) EnableSsr(ssrURL string) {
+func (i *Inertia) EnableSsr(ssrURL string, client ...*http.Client) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
 	i.ssrURL = ssrURL
-	i.ssrClient = &http.Client{}
+
+	if len(client) > 0 && client[0] != nil {
+		i.ssrClient = client[0]
+	} else {
+		i.ssrClient = &http.Client{}
+	}
 }
 
 // EnableSsrWithDefault function.
-func (i *Inertia) EnableSsrWithDefault() {
-	i.EnableSsr("http://127.0.0.1:13714")
+func (i *Inertia) EnableSsrWithDefault(client ...*http.Client) {
+	i.EnableSsr("http://127.0.0.1:13714", client...)
 }
 
 // DisableSsr function.
@@ -98,7 +101,7 @@ func (i *Inertia) ShareViewData(key string, value any) {
 
 // WithViewData function.
 func (i *Inertia) WithViewData(ctx context.Context, key string, value any) context.Context {
-	return contextProp(ctx, ContextKeyViewData, key, value)
+	return contextSet(ctx, ContextKeyViewData, key, value)
 }
 
 // Share function.
@@ -111,47 +114,47 @@ func (i *Inertia) Share(key string, value any) {
 
 // WithProp function.
 func (i *Inertia) WithProp(ctx context.Context, key string, value any) context.Context {
-	return contextProp(ctx, ContextKeyProps, key, value)
+	return contextSet(ctx, ContextKeyProps, key, value)
 }
 
 // WithDeferredProp function.
-func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func() any) context.Context {
-	return i.WithDeferredGroupProp(ctx, key, value, "default")
-}
+func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func() any, group ...string) context.Context {
+	g := "default"
+	if len(group) > 0 && group[0] != "" {
+		g = group[0]
+	}
 
-// WithDeferredGroupProp function.
-func (i *Inertia) WithDeferredGroupProp(ctx context.Context, key string, value func() any, group string) context.Context {
-	return contextProp(ctx, ContextKeyDeferredProps, key, contextDeferredProp{Group: group, Value: value})
+	return contextSet(ctx, ContextKeyDeferredProps, key, contextDeferredProp{Group: g, Value: value})
 }
 
 // WithMergeProp function.
 func (i *Inertia) WithMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextProp(ctx, ContextKeyMergeProps, key, value)
+	return contextSet(ctx, ContextKeyMergeProps, key, value)
 }
 
 // WithDeepMergeProp function.
 func (i *Inertia) WithDeepMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextProp(ctx, ContextKeyDeepMergeProps, key, value)
+	return contextSet(ctx, ContextKeyDeepMergeProps, key, value)
 }
 
 // WithPrependProp function.
 func (i *Inertia) WithPrependProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextProp(ctx, ContextKeyPrependProps, key, value)
+	return contextSet(ctx, ContextKeyPrependProps, key, value)
 }
 
 // WithOptionalProp function.
 func (i *Inertia) WithOptionalProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextProp(ctx, ContextKeyOptionalProps, key, value)
+	return contextSet(ctx, ContextKeyOptionalProps, key, value)
 }
 
 // WithAlwaysProp function.
 func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextProp(ctx, ContextKeyAlwaysProps, key, value)
+	return contextSet(ctx, ContextKeyAlwaysProps, key, value)
 }
 
 // WithOnceProp function.
 func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextProp(ctx, ContextKeyOnceProps, key, value)
+	return contextSet(ctx, ContextKeyOnceProps, key, value)
 }
 
 // WithClearHistory function.
@@ -288,7 +291,7 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 }
 
 func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) error {
-	contextProps, err := contextValue[map[string]any](r.Context(), ContextKeyProps)
+	contextProps, err := contextGet[map[string]any](r.Context(), ContextKeyProps)
 	if err != nil {
 		return err
 	}
@@ -314,7 +317,7 @@ func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) erro
 }
 
 func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) error {
-	deferredProps, err := contextValue[map[string]contextDeferredProp](r.Context(), ContextKeyDeferredProps)
+	deferredProps, err := contextGet[map[string]contextDeferredProp](r.Context(), ContextKeyDeferredProps)
 	if err != nil {
 		return err
 	}
@@ -343,7 +346,7 @@ func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) 
 }
 
 func (i *Inertia) createMergeProps(r *http.Request, rt *runtime, page *Page) error {
-	mergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyMergeProps)
+	mergeProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyMergeProps)
 	if err != nil {
 		return err
 	}
@@ -365,7 +368,7 @@ func (i *Inertia) createMergeProps(r *http.Request, rt *runtime, page *Page) err
 }
 
 func (i *Inertia) createDeepMergeProps(r *http.Request, rt *runtime, page *Page) error {
-	deepMergeProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyDeepMergeProps)
+	deepMergeProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyDeepMergeProps)
 	if err != nil {
 		return err
 	}
@@ -387,7 +390,7 @@ func (i *Inertia) createDeepMergeProps(r *http.Request, rt *runtime, page *Page)
 }
 
 func (i *Inertia) createPrependProps(r *http.Request, rt *runtime, page *Page) error {
-	prependProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyPrependProps)
+	prependProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyPrependProps)
 	if err != nil {
 		return err
 	}
@@ -409,7 +412,7 @@ func (i *Inertia) createPrependProps(r *http.Request, rt *runtime, page *Page) e
 }
 
 func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) error {
-	optionalProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOptionalProps)
+	optionalProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyOptionalProps)
 	if err != nil {
 		return err
 	}
@@ -432,7 +435,7 @@ func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) 
 }
 
 func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) error {
-	alwaysProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyAlwaysProps)
+	alwaysProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyAlwaysProps)
 	if err != nil {
 		return err
 	}
@@ -450,7 +453,7 @@ func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) er
 }
 
 func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) error {
-	onceProps, err := contextValue[map[string]func() any](r.Context(), ContextKeyOnceProps)
+	onceProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyOnceProps)
 	if err != nil {
 		return err
 	}
@@ -474,7 +477,7 @@ func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) erro
 }
 
 func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
-	contextViewData, err := contextValue[map[string]any](r.Context(), ContextKeyViewData)
+	contextViewData, err := contextGet[map[string]any](r.Context(), ContextKeyViewData)
 	if err != nil {
 		return nil, err
 	}
