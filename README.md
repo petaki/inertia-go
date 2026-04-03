@@ -142,25 +142,6 @@ You can find the example for the SSR based root template below. For more informa
 
 The following examples show how to use the package.
 
-### Share a prop (globally)
-
-```go
-inertiaManager.Share("title", "Inertia App Title")
-```
-
-### Share a prop (context based)
-
-```go
-func authenticate(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // ...
-        
-        ctx := inertiaManager.WithProp(r.Context(), "authUserID", user.ID)
-        next.ServeHTTP(w, r.WithContext(ctx))
-    })
-}
-```
-
 ### Share a function with root template (globally)
 
 ```go
@@ -192,6 +173,25 @@ r = r.WithContext(ctx)
 
 ```html
 <meta name="description" content="{{ .meta }}">
+```
+
+### Share a prop (globally)
+
+```go
+inertiaManager.Share("title", "Inertia App Title")
+```
+
+### Share a prop (context based)
+
+```go
+func authenticate(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // ...
+        
+        ctx := inertiaManager.WithProp(r.Context(), "authUserID", user.ID)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
 ```
 
 ### Deferred prop (context based)
