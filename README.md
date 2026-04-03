@@ -333,10 +333,10 @@ r = r.WithContext(ctx)
         {{ else }}
             {{ raw .ssr.Body }}
         {{ end }}
+        <script src="js/app.js"></script>
     </body>
 </html>
 ```
-
 
 ## Example Apps
 
