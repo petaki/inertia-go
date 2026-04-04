@@ -252,7 +252,7 @@ func TestWithViewData(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithViewData(ctx, "meta", "test-meta")
 
-	contextViewData, ok := ctx.Value(ContextKeyViewData).(map[string]any)
+	contextViewData, ok := ctx.Value(contextKeyViewData).(map[string]any)
 	if !ok {
 		t.Error("expected: context view data, got: empty value")
 	}
@@ -331,7 +331,7 @@ func TestWithProp(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithProp(ctx, "user", "test-user")
 
-	contextProps, ok := ctx.Value(ContextKeyProps).(map[string]any)
+	contextProps, ok := ctx.Value(contextKeyProps).(map[string]any)
 	if !ok {
 		t.Error("expected: context props, got: empty value")
 	}
@@ -520,6 +520,35 @@ func TestRenderWithMergeProp(t *testing.T) {
 	}
 }
 
+func TestRenderWithMergePropMatchOn(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithMergeProp(r.Context(), "results", func() any { return []int{1, 2} }, "id")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(page.MergeProps) != 1 || page.MergeProps[0] != "results" {
+		t.Errorf("expected mergeProps [results], got: %v", page.MergeProps)
+	}
+
+	if len(page.MatchPropsOn) != 1 || page.MatchPropsOn[0] != "results.id" {
+		t.Errorf("expected matchPropsOn [results.id], got: %v", page.MatchPropsOn)
+	}
+}
+
 func TestRenderWithDeepMergeProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -549,6 +578,35 @@ func TestRenderWithDeepMergeProp(t *testing.T) {
 	}
 }
 
+func TestRenderWithDeepMergePropMatchOn(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithDeepMergeProp(r.Context(), "settings", func() any { return map[string]string{"theme": "dark"} }, "key")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(page.DeepMergeProps) != 1 || page.DeepMergeProps[0] != "settings" {
+		t.Errorf("expected deepMergeProps [settings], got: %v", page.DeepMergeProps)
+	}
+
+	if len(page.MatchPropsOn) != 1 || page.MatchPropsOn[0] != "settings.key" {
+		t.Errorf("expected matchPropsOn [settings.key], got: %v", page.MatchPropsOn)
+	}
+}
+
 func TestRenderWithPrependProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -575,6 +633,35 @@ func TestRenderWithPrependProp(t *testing.T) {
 
 	if len(page.PrependProps) != 1 || page.PrependProps[0] != "notifications" {
 		t.Errorf("expected prependProps [notifications], got: %v", page.PrependProps)
+	}
+}
+
+func TestRenderWithPrependPropMatchOn(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithPrependProp(r.Context(), "notifications", func() any { return []string{"new"} }, "uuid")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(page.PrependProps) != 1 || page.PrependProps[0] != "notifications" {
+		t.Errorf("expected prependProps [notifications], got: %v", page.PrependProps)
+	}
+
+	if len(page.MatchPropsOn) != 1 || page.MatchPropsOn[0] != "notifications.uuid" {
+		t.Errorf("expected matchPropsOn [notifications.uuid], got: %v", page.MatchPropsOn)
 	}
 }
 

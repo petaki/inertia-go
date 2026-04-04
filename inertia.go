@@ -101,7 +101,7 @@ func (i *Inertia) ShareViewData(key string, value any) {
 
 // WithViewData function.
 func (i *Inertia) WithViewData(ctx context.Context, key string, value any) context.Context {
-	return contextSet(ctx, ContextKeyViewData, key, value)
+	return contextSet(ctx, contextKeyViewData, key, value)
 }
 
 // Share function.
@@ -114,7 +114,7 @@ func (i *Inertia) Share(key string, value any) {
 
 // WithProp function.
 func (i *Inertia) WithProp(ctx context.Context, key string, value any) context.Context {
-	return contextSet(ctx, ContextKeyProps, key, value)
+	return contextSet(ctx, contextKeyProps, key, value)
 }
 
 // WithDeferredProp function.
@@ -124,47 +124,47 @@ func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func()
 		g = group[0]
 	}
 
-	return contextSet(ctx, ContextKeyDeferredProps, key, contextDeferredProp{Group: g, Value: value})
+	return contextSet(ctx, contextKeyDeferredProps, key, contextDeferredProp{Group: g, Value: value})
 }
 
 // WithMergeProp function.
-func (i *Inertia) WithMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, ContextKeyMergeProps, key, value)
+func (i *Inertia) WithMergeProp(ctx context.Context, key string, value func() any, matchOn ...string) context.Context {
+	return contextSet(ctx, contextKeyMergeProps, key, contextMergeableProp{MatchOn: matchOn, Value: value})
 }
 
 // WithDeepMergeProp function.
-func (i *Inertia) WithDeepMergeProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, ContextKeyDeepMergeProps, key, value)
+func (i *Inertia) WithDeepMergeProp(ctx context.Context, key string, value func() any, matchOn ...string) context.Context {
+	return contextSet(ctx, contextKeyDeepMergeProps, key, contextMergeableProp{MatchOn: matchOn, Value: value})
 }
 
 // WithPrependProp function.
-func (i *Inertia) WithPrependProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, ContextKeyPrependProps, key, value)
+func (i *Inertia) WithPrependProp(ctx context.Context, key string, value func() any, matchOn ...string) context.Context {
+	return contextSet(ctx, contextKeyPrependProps, key, contextMergeableProp{MatchOn: matchOn, Value: value})
 }
 
 // WithOptionalProp function.
 func (i *Inertia) WithOptionalProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, ContextKeyOptionalProps, key, value)
+	return contextSet(ctx, contextKeyOptionalProps, key, value)
 }
 
 // WithAlwaysProp function.
 func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, ContextKeyAlwaysProps, key, value)
+	return contextSet(ctx, contextKeyAlwaysProps, key, value)
 }
 
 // WithOnceProp function.
 func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, ContextKeyOnceProps, key, value)
+	return contextSet(ctx, contextKeyOnceProps, key, value)
 }
 
 // WithClearHistory function.
 func (i *Inertia) WithClearHistory(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ContextKeyClearHistory, true)
+	return context.WithValue(ctx, contextKeyClearHistory, true)
 }
 
 // WithEncryptHistory function.
 func (i *Inertia) WithEncryptHistory(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ContextKeyEncryptHistory, true)
+	return context.WithValue(ctx, contextKeyEncryptHistory, true)
 }
 
 // Render function.
@@ -197,12 +197,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		}
 	}
 
-	clearHistory, ok := r.Context().Value(ContextKeyClearHistory).(bool)
+	clearHistory, ok := r.Context().Value(contextKeyClearHistory).(bool)
 	if ok {
 		page.ClearHistory = clearHistory
 	}
 
-	encryptHistory, ok := r.Context().Value(ContextKeyEncryptHistory).(bool)
+	encryptHistory, ok := r.Context().Value(contextKeyEncryptHistory).(bool)
 	if ok {
 		page.EncryptHistory = encryptHistory
 	}
@@ -291,7 +291,7 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 }
 
 func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) error {
-	contextProps, err := contextGet[map[string]any](r.Context(), ContextKeyProps)
+	contextProps, err := contextGet[map[string]any](r.Context(), contextKeyProps)
 	if err != nil {
 		return err
 	}
@@ -317,7 +317,7 @@ func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) erro
 }
 
 func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) error {
-	deferredProps, err := contextGet[map[string]contextDeferredProp](r.Context(), ContextKeyDeferredProps)
+	deferredProps, err := contextGet[map[string]contextDeferredProp](r.Context(), contextKeyDeferredProps)
 	if err != nil {
 		return err
 	}
@@ -346,65 +346,45 @@ func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) 
 }
 
 func (i *Inertia) createMergeProps(r *http.Request, rt *runtime, page *Page) error {
-	mergeProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyMergeProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range mergeProps {
-		_, ok := rt.except[key]
-		if ok {
-			continue
-		}
-
-		_, ok = rt.only[key]
-		if len(rt.only) == 0 || ok {
-			page.Props[key] = value()
-			page.MergeProps = append(page.MergeProps, key)
-		}
-	}
-
-	return nil
+	return i.createMergeableProps(r, rt, page, contextKeyMergeProps)
 }
 
 func (i *Inertia) createDeepMergeProps(r *http.Request, rt *runtime, page *Page) error {
-	deepMergeProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyDeepMergeProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range deepMergeProps {
-		_, ok := rt.except[key]
-		if ok {
-			continue
-		}
-
-		_, ok = rt.only[key]
-		if len(rt.only) == 0 || ok {
-			page.Props[key] = value()
-			page.DeepMergeProps = append(page.DeepMergeProps, key)
-		}
-	}
-
-	return nil
+	return i.createMergeableProps(r, rt, page, contextKeyDeepMergeProps)
 }
 
 func (i *Inertia) createPrependProps(r *http.Request, rt *runtime, page *Page) error {
-	prependProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyPrependProps)
+	return i.createMergeableProps(r, rt, page, contextKeyPrependProps)
+}
+
+func (i *Inertia) createMergeableProps(r *http.Request, rt *runtime, page *Page, key contextKey) error {
+	props, err := contextGet[map[string]contextMergeableProp](r.Context(), key)
 	if err != nil {
 		return err
 	}
 
-	for key, value := range prependProps {
-		_, ok := rt.except[key]
+	for k, prop := range props {
+		_, ok := rt.except[k]
 		if ok {
 			continue
 		}
 
-		_, ok = rt.only[key]
+		_, ok = rt.only[k]
 		if len(rt.only) == 0 || ok {
-			page.Props[key] = value()
-			page.PrependProps = append(page.PrependProps, key)
+			page.Props[k] = prop.Value()
+
+			switch key {
+			case contextKeyMergeProps:
+				page.MergeProps = append(page.MergeProps, k)
+			case contextKeyDeepMergeProps:
+				page.DeepMergeProps = append(page.DeepMergeProps, k)
+			case contextKeyPrependProps:
+				page.PrependProps = append(page.PrependProps, k)
+			}
+
+			for _, m := range prop.MatchOn {
+				page.MatchPropsOn = append(page.MatchPropsOn, k+"."+m)
+			}
 		}
 	}
 
@@ -412,7 +392,7 @@ func (i *Inertia) createPrependProps(r *http.Request, rt *runtime, page *Page) e
 }
 
 func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) error {
-	optionalProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyOptionalProps)
+	optionalProps, err := contextGet[map[string]func() any](r.Context(), contextKeyOptionalProps)
 	if err != nil {
 		return err
 	}
@@ -435,7 +415,7 @@ func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) 
 }
 
 func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) error {
-	alwaysProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyAlwaysProps)
+	alwaysProps, err := contextGet[map[string]func() any](r.Context(), contextKeyAlwaysProps)
 	if err != nil {
 		return err
 	}
@@ -453,7 +433,7 @@ func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) er
 }
 
 func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) error {
-	onceProps, err := contextGet[map[string]func() any](r.Context(), ContextKeyOnceProps)
+	onceProps, err := contextGet[map[string]func() any](r.Context(), contextKeyOnceProps)
 	if err != nil {
 		return err
 	}
@@ -477,7 +457,7 @@ func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) erro
 }
 
 func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
-	contextViewData, err := contextGet[map[string]any](r.Context(), ContextKeyViewData)
+	contextViewData, err := contextGet[map[string]any](r.Context(), contextKeyViewData)
 	if err != nil {
 		return nil, err
 	}

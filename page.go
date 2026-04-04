@@ -10,6 +10,7 @@ type Page struct {
 	MergeProps     []string            `json:"mergeProps,omitempty"`
 	DeepMergeProps []string            `json:"deepMergeProps,omitempty"`
 	PrependProps   []string            `json:"prependProps,omitempty"`
+	MatchPropsOn   []string            `json:"matchPropsOn,omitempty"`
 	ClearHistory   bool                `json:"clearHistory,omitempty"`
 	EncryptHistory bool                `json:"encryptHistory,omitempty"`
 }

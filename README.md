@@ -245,6 +245,24 @@ ctx := inertiaManager.WithMergeProp(r.Context(), "results", func() any {
 r = r.WithContext(ctx)
 ```
 
+Or with match on:
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "results", func() any {
+    return getResults()
+}, "id")
+r = r.WithContext(ctx)
+```
+
+Or with multiple nested match on paths:
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "complexData", func() any {
+    return getComplexData()
+}, "users.data.id", "messages.uuid")
+r = r.WithContext(ctx)
+```
+
 ### Deep merge prop (context based)
 
 ```go
@@ -254,12 +272,30 @@ ctx := inertiaManager.WithDeepMergeProp(r.Context(), "settings", func() any {
 r = r.WithContext(ctx)
 ```
 
+Or with match on:
+
+```go
+ctx := inertiaManager.WithDeepMergeProp(r.Context(), "settings", func() any {
+    return getSettings()
+}, "id")
+r = r.WithContext(ctx)
+```
+
 ### Prepend prop (context based)
 
 ```go
 ctx := inertiaManager.WithPrependProp(r.Context(), "notifications", func() any {
     return getNotifications()
 })
+r = r.WithContext(ctx)
+```
+
+Or with match on:
+
+```go
+ctx := inertiaManager.WithPrependProp(r.Context(), "notifications", func() any {
+    return getNotifications()
+}, "id")
 r = r.WithContext(ctx)
 ```
 
