@@ -116,6 +116,16 @@ func (i *Inertia) WithProp(ctx context.Context, key string, value any) context.C
 	return contextSet(ctx, contextKeyProps, key, value)
 }
 
+// WithOptionalProp function.
+func (i *Inertia) WithOptionalProp(ctx context.Context, key string, value func() any) context.Context {
+	return contextSet(ctx, contextKeyOptionalProps, key, value)
+}
+
+// WithAlwaysProp function.
+func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() any) context.Context {
+	return contextSet(ctx, contextKeyAlwaysProps, key, value)
+}
+
 // WithDeferredProp function.
 func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func() any, group ...string) context.Context {
 	g := "default"
@@ -141,19 +151,26 @@ func (i *Inertia) WithPrependProp(ctx context.Context, key string, value func() 
 	return contextSet(ctx, contextKeyPrependProps, key, contextMergeableProp{MatchOn: matchOn, Value: value})
 }
 
-// WithOptionalProp function.
-func (i *Inertia) WithOptionalProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, contextKeyOptionalProps, key, value)
-}
-
-// WithAlwaysProp function.
-func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() any) context.Context {
-	return contextSet(ctx, contextKeyAlwaysProps, key, value)
+// WithScrollProp function.
+func (i *Inertia) WithScrollProp(ctx context.Context, key string, prop ScrollPageProp) context.Context {
+	return contextSet(ctx, contextKeyScrollProp, key, prop)
 }
 
 // WithOnceProp function.
 func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any) context.Context {
 	return contextSet(ctx, contextKeyOnceProps, key, value)
+}
+
+// WithOnce function.
+func (i *Inertia) WithOnce(ctx context.Context, key string, prop OncePageProp) context.Context {
+	prop.Prop = key
+
+	return contextSet(ctx, contextKeyOnce, key, prop)
+}
+
+// WithFlashProp function.
+func (i *Inertia) WithFlashProp(ctx context.Context, data map[string]any) context.Context {
+	return context.WithValue(ctx, contextKeyFlash, data)
 }
 
 // WithClearHistory function.
@@ -182,13 +199,15 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	for _, create := range []func(*http.Request, *runtime, *Page) error{
 		i.createBaseProps,
+		i.createOptionalProps,
+		i.createAlwaysProps,
 		i.createDeferredProps,
 		i.createMergeProps,
 		i.createDeepMergeProps,
 		i.createPrependProps,
-		i.createOptionalProps,
-		i.createAlwaysProps,
-		i.createOnceProps,
+		i.createScrollProps,
+		i.createOncePropsAndModifiers,
+		i.createFlash,
 	} {
 		err := create(r, rt, page)
 		if err != nil {
@@ -315,6 +334,47 @@ func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) erro
 	return nil
 }
 
+func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) error {
+	optionalProps, err := contextGet[map[string]func() any](r.Context(), contextKeyOptionalProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range optionalProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		if rt.isPartial {
+			_, ok = rt.only[key]
+			if ok {
+				page.Props[key] = value()
+			}
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) error {
+	alwaysProps, err := contextGet[map[string]func() any](r.Context(), contextKeyAlwaysProps)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range alwaysProps {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		page.Props[key] = value()
+	}
+
+	return nil
+}
+
 func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) error {
 	deferredProps, err := contextGet[map[string]contextDeferredProp](r.Context(), contextKeyDeferredProps)
 	if err != nil {
@@ -372,17 +432,20 @@ func (i *Inertia) createMergeableProps(r *http.Request, rt *runtime, page *Page,
 		if len(rt.only) == 0 || ok {
 			page.Props[k] = prop.Value()
 
-			switch key {
-			case contextKeyMergeProps:
-				page.MergeProps = append(page.MergeProps, k)
-			case contextKeyDeepMergeProps:
-				page.DeepMergeProps = append(page.DeepMergeProps, k)
-			case contextKeyPrependProps:
-				page.PrependProps = append(page.PrependProps, k)
-			}
+			_, resetting := rt.reset[k]
+			if !resetting {
+				switch key {
+				case contextKeyMergeProps:
+					page.MergeProps = append(page.MergeProps, k)
+				case contextKeyDeepMergeProps:
+					page.DeepMergeProps = append(page.DeepMergeProps, k)
+				case contextKeyPrependProps:
+					page.PrependProps = append(page.PrependProps, k)
+				}
 
-			for _, m := range prop.MatchOn {
-				page.MatchPropsOn = append(page.MatchPropsOn, k+"."+m)
+				for _, m := range prop.MatchOn {
+					page.MatchPropsOn = append(page.MatchPropsOn, k+"."+m)
+				}
 			}
 		}
 	}
@@ -390,48 +453,29 @@ func (i *Inertia) createMergeableProps(r *http.Request, rt *runtime, page *Page,
 	return nil
 }
 
-func (i *Inertia) createOptionalProps(r *http.Request, rt *runtime, page *Page) error {
-	optionalProps, err := contextGet[map[string]func() any](r.Context(), contextKeyOptionalProps)
+func (i *Inertia) createScrollProps(r *http.Request, rt *runtime, page *Page) error {
+	scrollProps, err := contextGet[map[string]ScrollPageProp](r.Context(), contextKeyScrollProp)
 	if err != nil {
 		return err
 	}
 
-	for key, value := range optionalProps {
-		_, ok := rt.except[key]
-		if ok {
-			continue
+	for key, prop := range scrollProps {
+		if page.ScrollProps == nil {
+			page.ScrollProps = make(map[string]ScrollPageProp)
 		}
 
-		if rt.isPartial {
-			_, ok = rt.only[key]
-			if ok {
-				page.Props[key] = value()
-			}
+		_, ok := rt.reset[key]
+		if ok {
+			prop.Reset = true
 		}
+
+		page.ScrollProps[key] = prop
 	}
 
 	return nil
 }
 
-func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) error {
-	alwaysProps, err := contextGet[map[string]func() any](r.Context(), contextKeyAlwaysProps)
-	if err != nil {
-		return err
-	}
-
-	for key, value := range alwaysProps {
-		_, ok := rt.except[key]
-		if ok {
-			continue
-		}
-
-		page.Props[key] = value()
-	}
-
-	return nil
-}
-
-func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) error {
+func (i *Inertia) createOncePropsAndModifiers(r *http.Request, rt *runtime, page *Page) error {
 	onceProps, err := contextGet[map[string]func() any](r.Context(), contextKeyOnceProps)
 	if err != nil {
 		return err
@@ -443,6 +487,12 @@ func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) erro
 			continue
 		}
 
+		if page.OnceProps == nil {
+			page.OnceProps = make(map[string]OncePageProp)
+		}
+
+		page.OnceProps[key] = OncePageProp{Prop: key}
+
 		_, ok = rt.exceptOnce[key]
 		if !ok {
 			_, ok = rt.only[key]
@@ -450,6 +500,33 @@ func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) erro
 				page.Props[key] = value()
 			}
 		}
+	}
+
+	onceModifiers, err := contextGet[map[string]OncePageProp](r.Context(), contextKeyOnce)
+	if err != nil {
+		return err
+	}
+
+	for key, prop := range onceModifiers {
+		if page.OnceProps == nil {
+			page.OnceProps = make(map[string]OncePageProp)
+		}
+
+		page.OnceProps[key] = prop
+
+		_, ok := rt.exceptOnce[key]
+		if ok {
+			delete(page.Props, key)
+		}
+	}
+
+	return nil
+}
+
+func (i *Inertia) createFlash(r *http.Request, _ *runtime, page *Page) error {
+	flash, ok := r.Context().Value(contextKeyFlash).(map[string]any)
+	if ok {
+		page.Flash = flash
 	}
 
 	return nil

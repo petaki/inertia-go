@@ -11,6 +11,7 @@ type runtime struct {
 	only       map[string]struct{}
 	except     map[string]struct{}
 	exceptOnce map[string]struct{}
+	reset      map[string]struct{}
 }
 
 func newRuntime(r *http.Request, component string, props map[string]any) *runtime {
@@ -19,6 +20,7 @@ func newRuntime(r *http.Request, component string, props map[string]any) *runtim
 		only:       make(map[string]struct{}),
 		except:     make(map[string]struct{}),
 		exceptOnce: make(map[string]struct{}),
+		reset:      make(map[string]struct{}),
 	}
 
 	if r.Header.Get(HeaderPartialComponent) == component {
@@ -42,6 +44,12 @@ func newRuntime(r *http.Request, component string, props map[string]any) *runtim
 	if exceptOnceHeader := r.Header.Get(HeaderExceptOnceProps); exceptOnceHeader != "" {
 		for value := range strings.SplitSeq(exceptOnceHeader, ",") {
 			rt.exceptOnce[value] = struct{}{}
+		}
+	}
+
+	if resetHeader := r.Header.Get(HeaderReset); resetHeader != "" {
+		for value := range strings.SplitSeq(resetHeader, ",") {
+			rt.reset[value] = struct{}{}
 		}
 	}
 
