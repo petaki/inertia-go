@@ -907,7 +907,7 @@ func TestRenderWithOnceModifier(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	ctx := i.WithMergeProp(r.Context(), "activity", func() any { return []string{"a"} })
-	ctx = i.WithOnce(ctx, "activity", OncePageProp{})
+	ctx = i.WithOnce(ctx, "activity")
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -942,7 +942,7 @@ func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderExceptOnceProps, "activity")
 	ctx := i.WithMergeProp(r.Context(), "activity", func() any { return []string{"a"} })
-	ctx = i.WithOnce(ctx, "activity", OncePageProp{})
+	ctx = i.WithOnce(ctx, "activity")
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 

@@ -162,10 +162,15 @@ func (i *Inertia) WithOnceProp(ctx context.Context, key string, value func() any
 }
 
 // WithOnce function.
-func (i *Inertia) WithOnce(ctx context.Context, key string, prop OncePageProp) context.Context {
-	prop.Prop = key
+func (i *Inertia) WithOnce(ctx context.Context, key string, prop ...OncePageProp) context.Context {
+	p := OncePageProp{}
+	if len(prop) > 0 {
+		p = prop[0]
+	}
 
-	return contextSet(ctx, contextKeyOnce, key, prop)
+	p.Prop = key
+
+	return contextSet(ctx, contextKeyOnce, key, p)
 }
 
 // WithFlashProp function.
@@ -207,7 +212,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		i.createPrependProps,
 		i.createScrollProps,
 		i.createOncePropsAndModifiers,
-		i.createFlash,
+		i.createFlashProps,
 	} {
 		err := create(r, rt, page)
 		if err != nil {
@@ -523,7 +528,7 @@ func (i *Inertia) createOncePropsAndModifiers(r *http.Request, rt *runtime, page
 	return nil
 }
 
-func (i *Inertia) createFlash(r *http.Request, _ *runtime, page *Page) error {
+func (i *Inertia) createFlashProps(r *http.Request, _ *runtime, page *Page) error {
 	flash, ok := r.Context().Value(contextKeyFlash).(map[string]any)
 	if ok {
 		page.Flash = flash
