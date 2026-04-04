@@ -233,7 +233,8 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		i.createDeepMergeProps,
 		i.createPrependProps,
 		i.createScrollProps,
-		i.createOncePropsAndModifiers,
+		i.createOnceProps,
+		i.createOnceModifiers,
 		i.createFlashProps,
 	} {
 		err := create(r, rt, page)
