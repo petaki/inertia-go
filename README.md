@@ -311,7 +311,7 @@ r = r.WithContext(ctx)
 Or with expiration:
 
 ```go
-expiresAt := time.Now().Add(24 * time.Hour).Unix()
+expiresAt := time.Now().Add(24 * time.Hour).UnixMilli()
 ctx := inertiaManager.WithDeferredProp(r.Context(), "permissions", func() any {
     return getPermissions()
 })
