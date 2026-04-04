@@ -31,6 +31,10 @@ func TestNewRuntime(t *testing.T) {
 	if len(rt.exceptOnce) != 0 {
 		t.Errorf("expected empty exceptOnce, got: %d", len(rt.exceptOnce))
 	}
+
+	if len(rt.reset) != 0 {
+		t.Errorf("expected empty reset, got: %d", len(rt.reset))
+	}
 }
 
 func TestNewRuntimeWithPartialOnly(t *testing.T) {
@@ -102,6 +106,31 @@ func TestNewRuntimeWithExceptOnce(t *testing.T) {
 	_, ok = rt.exceptOnce["flags"]
 	if !ok {
 		t.Error("expected flags in exceptOnce")
+	}
+}
+
+func TestNewRuntimeWithReset(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderReset, "results,items")
+
+	rt := newRuntime(r, "test/component", nil)
+
+	if rt.isPartial {
+		t.Error("expected isPartial to be false")
+	}
+
+	if len(rt.reset) != 2 {
+		t.Errorf("expected 2 reset entries, got: %d", len(rt.reset))
+	}
+
+	_, ok := rt.reset["results"]
+	if !ok {
+		t.Error("expected results in reset")
+	}
+
+	_, ok = rt.reset["items"]
+	if !ok {
+		t.Error("expected items in reset")
 	}
 }
 
