@@ -37,7 +37,7 @@ var templateFS embed.FS
 
 // ...
 
-inertiaManager := inertia.NewWithFS(url, rootTemplate, version, templateFS)
+inertiaManager := inertia.New(url, rootTemplate, version, templateFS)
 ```
 
 ### 2. Register the middleware
@@ -77,89 +77,37 @@ err := inertiaManager.Render(w, r, "home/Index", map[string]any{
 First, enable SSR with the url of the Node server:
 
 ```go
-inertiaManager.EnableSsrWithDefault() // http://127.0.0.1:13714
+inertiaManager.EnableSsrWithDefault() // http://127.0.0.1:13714/render
 ```
 
 Or with custom url:
 
 ```go
-inertiaManager.EnableSsr("http://ssr-host:13714")
+inertiaManager.EnableSsr("http://ssr-host:13714/render")
 ```
 
-This is a simplified example using Vue 3 and Laravel Mix.
+Or with the Vite dev server:
 
-```js
-// resources/js/ssr.js
-
-import { createInertiaApp } from '@inertiajs/vue3';
-import createServer from '@inertiajs/vue3/server';
-import { renderToString } from '@vue/server-renderer';
-import { createSSRApp, h } from 'vue';
-
-createServer(page => createInertiaApp({
-    page,
-    render: renderToString,
-    resolve: name => require(`./pages/${name}`),
-    setup({ App, props, plugin }) {
-        return createSSRApp({
-            render: () => h(App, props)
-        }).use(plugin);
-    }
-}));
+```go
+inertiaManager.EnableSsr("http://localhost:5173/__inertia_ssr")
 ```
 
-The following config creates the `ssr.js` file in the root directory, which should not be embedded in the binary.
+You can also provide a custom `*http.Client`:
 
-```js
-// webpack.ssr.mix.js
+```go
+client := &http.Client{
+    Timeout: 10 * time.Second,
+}
 
-const mix = require('laravel-mix');
-const webpackNodeExternals = require('webpack-node-externals');
-
-mix.options({ manifest: false })
-    .js('resources/js/ssr.js', '/')
-    .vue({
-        version: 3,
-        options: {
-            optimizeSSR: true
-        }
-    })
-    .webpackConfig({
-        target: 'node',
-        externals: [
-            webpackNodeExternals({
-                allowlist: [
-                    /^@inertiajs/
-                ]
-            })
-        ]
-    });
+inertiaManager.EnableSsr("http://ssr-host:13714/render", client)
+inertiaManager.EnableSsrWithDefault(client)
 ```
 
-You can find the example for the SSR based root template below. For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
+For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
 
 ## Examples
 
 The following examples show how to use the package.
-
-### Share a prop (globally)
-
-```go
-inertiaManager.Share("title", "Inertia App Title")
-```
-
-### Share a prop (context based)
-
-```go
-func authenticate(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // ...
-        
-        ctx := inertiaManager.WithProp(r.Context(), "authUserID", user.ID)
-        next.ServeHTTP(w, r.WithContext(ctx))
-    })
-}
-```
 
 ### Share a function with root template (globally)
 
@@ -194,6 +142,160 @@ r = r.WithContext(ctx)
 <meta name="description" content="{{ .meta }}">
 ```
 
+### Props comparison
+
+| Prop Type | Method(s) | Evaluation | Full Render | Partial Render |
+|-----------|-----------|------------|-------------|----------------|
+| Base | `Share`, `WithProp`, `Render` | Eager | Included | Included if requested |
+| Deferred | `WithDeferredProp` | Lazy | Excluded (deferred) | Included if requested |
+| Merge | `WithMergeProp` | Lazy | Included | Included if requested |
+| Deep Merge | `WithDeepMergeProp` | Lazy | Included | Included if requested |
+| Prepend | `WithPrependProp` | Lazy | Included | Included if requested |
+| Optional | `WithOptionalProp` | Lazy | Excluded | Included if requested |
+| Always | `WithAlwaysProp` | Lazy | Included | Always included |
+| Once | `WithOnceProp` | Lazy | Included | Excluded if in except-once |
+
+### Share a prop (globally)
+
+```go
+inertiaManager.Share("title", "Inertia App Title")
+```
+
+### Share a prop (context based)
+
+```go
+func authenticate(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        // ...
+        
+        ctx := inertiaManager.WithProp(r.Context(), "authUserID", user.ID)
+        next.ServeHTTP(w, r.WithContext(ctx))
+    })
+}
+```
+
+### Deferred prop (context based)
+
+```go
+ctx := inertiaManager.WithDeferredProp(r.Context(), "comments", func() any {
+    return getComments()
+})
+r = r.WithContext(ctx)
+```
+
+### Deferred prop with group (context based)
+
+```go
+ctx := inertiaManager.WithDeferredProp(r.Context(), "comments", func() any {
+    return getComments()
+}, "my-group")
+r = r.WithContext(ctx)
+```
+
+### Merge prop (context based)
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "results", func() any {
+    return getResults()
+})
+r = r.WithContext(ctx)
+```
+
+Or with match on:
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "results", func() any {
+    return getResults()
+}, "id")
+r = r.WithContext(ctx)
+```
+
+Or with multiple nested match on paths:
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "complexData", func() any {
+    return getComplexData()
+}, "users.data.id", "messages.uuid")
+r = r.WithContext(ctx)
+```
+
+### Deep merge prop (context based)
+
+```go
+ctx := inertiaManager.WithDeepMergeProp(r.Context(), "settings", func() any {
+    return getSettings()
+})
+r = r.WithContext(ctx)
+```
+
+Or with match on:
+
+```go
+ctx := inertiaManager.WithDeepMergeProp(r.Context(), "settings", func() any {
+    return getSettings()
+}, "id")
+r = r.WithContext(ctx)
+```
+
+### Prepend prop (context based)
+
+```go
+ctx := inertiaManager.WithPrependProp(r.Context(), "notifications", func() any {
+    return getNotifications()
+})
+r = r.WithContext(ctx)
+```
+
+Or with match on:
+
+```go
+ctx := inertiaManager.WithPrependProp(r.Context(), "notifications", func() any {
+    return getNotifications()
+}, "id")
+r = r.WithContext(ctx)
+```
+
+### Optional prop (context based)
+
+```go
+ctx := inertiaManager.WithOptionalProp(r.Context(), "extra", func() any {
+    return getExtra()
+})
+r = r.WithContext(ctx)
+```
+
+### Always prop (context based)
+
+```go
+ctx := inertiaManager.WithAlwaysProp(r.Context(), "errors", func() any {
+    return getErrors()
+})
+r = r.WithContext(ctx)
+```
+
+### Once prop (context based)
+
+```go
+ctx := inertiaManager.WithOnceProp(r.Context(), "plans", func() any {
+    return getPlans()
+})
+r = r.WithContext(ctx)
+```
+
+### Clear history (context based)
+
+```go
+ctx := inertiaManager.WithClearHistory(r.Context())
+r = r.WithContext(ctx)
+```
+
+### Encrypt history (context based)
+
+```go
+ctx := inertiaManager.WithEncryptHistory(r.Context())
+r = r.WithContext(ctx)
+```
+
 ### Root template
 
 ```html
@@ -206,7 +308,8 @@ r = r.WithContext(ctx)
         <link rel="icon" type="image/x-icon" href="favicon.ico">
     </head>
     <body>
-        <div id="app" data-page="{{ marshal .page }}"></div>
+        <script data-page="app" type="application/json">{{ marshal .page }}</script>
+        <div id="app"></div>
         <script src="js/app.js"></script>
     </body>
 </html>
@@ -228,10 +331,12 @@ r = r.WithContext(ctx)
     </head>
     <body>
         {{ if not .ssr }}
-            <div id="app" data-page="{{ marshal .page }}"></div>
+            <script data-page="app" type="application/json">{{ marshal .page }}</script>
+            <div id="app"></div>
         {{ else }}
             {{ raw .ssr.Body }}
         {{ end }}
+        <script src="js/app.js"></script>
     </body>
 </html>
 ```

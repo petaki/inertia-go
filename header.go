@@ -15,4 +15,10 @@ const (
 
 	// HeaderPartialOnly header.
 	HeaderPartialOnly = "X-Inertia-Partial-Data"
+
+	// HeaderPartialExcept header.
+	HeaderPartialExcept = "X-Inertia-Partial-Except"
+
+	// HeaderExceptOnceProps header.
+	HeaderExceptOnceProps = "X-Inertia-Except-Once-Props"
 )
