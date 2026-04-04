@@ -147,13 +147,18 @@ r = r.WithContext(ctx)
 | Prop Type | Method(s) | Evaluation | Full Render | Partial Render |
 |-----------|-----------|------------|-------------|----------------|
 | Base | `Share`, `WithProp`, `Render` | Eager | Included | Included if requested |
+| Optional | `WithOptionalProp` | Lazy | Excluded | Included if requested |
+| Always | `WithAlwaysProp` | Lazy | Included | Always included |
 | Deferred | `WithDeferredProp` | Lazy | Excluded (deferred) | Included if requested |
 | Merge | `WithMergeProp` | Lazy | Included | Included if requested |
 | Deep Merge | `WithDeepMergeProp` | Lazy | Included | Included if requested |
 | Prepend | `WithPrependProp` | Lazy | Included | Included if requested |
-| Optional | `WithOptionalProp` | Lazy | Excluded | Included if requested |
-| Always | `WithAlwaysProp` | Lazy | Included | Always included |
-| Once | `WithOnceProp` | Lazy | Included | Excluded if in except-once |
+| Scroll | `WithScrollProp` | — | Metadata only | Metadata only |
+| Once | `WithOnceProp`, `WithOnce` | Lazy | Included | Excluded if in except-once |
+| Flash | `WithFlashProp` | Eager | Included | Included |
+
+`WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
+`WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
 
 ### Share a prop (globally)
 
@@ -172,6 +177,24 @@ func authenticate(next http.Handler) http.Handler {
         next.ServeHTTP(w, r.WithContext(ctx))
     })
 }
+```
+
+### Optional prop (context based)
+
+```go
+ctx := inertiaManager.WithOptionalProp(r.Context(), "extra", func() any {
+    return getExtra()
+})
+r = r.WithContext(ctx)
+```
+
+### Always prop (context based)
+
+```go
+ctx := inertiaManager.WithAlwaysProp(r.Context(), "errors", func() any {
+    return getErrors()
+})
+r = r.WithContext(ctx)
 ```
 
 ### Deferred prop (context based)
@@ -255,20 +278,13 @@ ctx := inertiaManager.WithPrependProp(r.Context(), "notifications", func() any {
 r = r.WithContext(ctx)
 ```
 
-### Optional prop (context based)
+### Scroll prop (context based)
 
 ```go
-ctx := inertiaManager.WithOptionalProp(r.Context(), "extra", func() any {
-    return getExtra()
-})
-r = r.WithContext(ctx)
-```
-
-### Always prop (context based)
-
-```go
-ctx := inertiaManager.WithAlwaysProp(r.Context(), "errors", func() any {
-    return getErrors()
+ctx := inertiaManager.WithScrollProp(r.Context(), "items", inertia.ScrollPageProp{
+    PageName:    "page",
+    CurrentPage: 1,
+    NextPage:    2,
 })
 r = r.WithContext(ctx)
 ```
@@ -278,6 +294,36 @@ r = r.WithContext(ctx)
 ```go
 ctx := inertiaManager.WithOnceProp(r.Context(), "plans", func() any {
     return getPlans()
+})
+r = r.WithContext(ctx)
+```
+
+### Once modifier (context based)
+
+```go
+ctx := inertiaManager.WithMergeProp(r.Context(), "activity", func() any {
+    return getActivity()
+})
+ctx = inertiaManager.WithOnce(ctx, "activity", inertia.OncePageProp{})
+r = r.WithContext(ctx)
+```
+
+Or with expiration:
+
+```go
+expiresAt := time.Now().Add(24 * time.Hour).Unix()
+ctx := inertiaManager.WithDeferredProp(r.Context(), "permissions", func() any {
+    return getPermissions()
+})
+ctx = inertiaManager.WithOnce(ctx, "permissions", inertia.OncePageProp{ExpiresAt: &expiresAt})
+r = r.WithContext(ctx)
+```
+
+### Flash (context based)
+
+```go
+ctx := inertiaManager.WithFlashProp(r.Context(), map[string]any{
+    "success": "Item created successfully",
 })
 r = r.WithContext(ctx)
 ```

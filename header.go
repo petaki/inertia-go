@@ -21,4 +21,7 @@ const (
 
 	// HeaderExceptOnceProps header.
 	HeaderExceptOnceProps = "X-Inertia-Except-Once-Props"
+
+	// HeaderReset header.
+	HeaderReset = "X-Inertia-Reset"
 )

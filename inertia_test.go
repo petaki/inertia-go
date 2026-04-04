@@ -408,6 +408,89 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestRenderWithOptionalProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["extra"]; ok {
+		t.Error("expected optional prop to be excluded from full load")
+	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "extra")
+	ctx = i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" })
+	r = r.WithContext(ctx)
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page2 Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if page2.Props["extra"] != "opt" {
+		t.Errorf("expected: opt, got: %v", page2.Props["extra"])
+	}
+}
+
+func TestRenderWithAlwaysProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "title")
+	ctx := i.WithAlwaysProp(r.Context(), "errors", func() any { return map[string]string{} })
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"title": "Test",
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["errors"]; !ok {
+		t.Error("expected always prop to be included even when not requested")
+	}
+}
+
 func TestRenderWithDeferredProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -549,6 +632,40 @@ func TestRenderWithMergePropMatchOn(t *testing.T) {
 	}
 }
 
+func TestRenderWithResetMergeProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderReset, "results")
+	ctx := i.WithMergeProp(r.Context(), "results", func() any { return []int{1, 2} }, "id")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["results"]; !ok {
+		t.Error("expected results prop to be included")
+	}
+
+	if len(page.MergeProps) != 0 {
+		t.Errorf("expected mergeProps to be empty, got: %v", page.MergeProps)
+	}
+
+	if len(page.MatchPropsOn) != 0 {
+		t.Errorf("expected matchPropsOn to be empty, got: %v", page.MatchPropsOn)
+	}
+}
+
 func TestRenderWithDeepMergeProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -665,18 +782,19 @@ func TestRenderWithPrependPropMatchOn(t *testing.T) {
 	}
 }
 
-func TestRenderWithOptionalProp(t *testing.T) {
+func TestRenderWithScrollProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
-
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
-	ctx := i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" })
+	ctx := i.WithScrollProp(r.Context(), "items", ScrollPageProp{
+		PageName:    "page",
+		CurrentPage: 1,
+		NextPage:    2,
+	})
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	err := i.Render(w, r, "test/component", map[string]any{
-		"title": "Test",
-	})
+	err := i.Render(w, r, "test/component", nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -688,50 +806,41 @@ func TestRenderWithOptionalProp(t *testing.T) {
 		t.Error(err)
 	}
 
-	if _, ok := page.Props["extra"]; ok {
-		t.Error("expected optional prop to be excluded from full load")
+	if page.ScrollProps == nil {
+		t.Error("expected scrollProps to be set")
 	}
 
-	r = httptest.NewRequest(http.MethodGet, "/", nil)
-	r.Header.Set(HeaderInertia, "true")
-	r.Header.Set(HeaderPartialComponent, "test/component")
-	r.Header.Set(HeaderPartialOnly, "extra")
-	ctx = i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" })
-	r = r.WithContext(ctx)
-	w = httptest.NewRecorder()
-
-	err = i.Render(w, r, "test/component", map[string]any{
-		"title": "Test",
-	})
-	if err != nil {
-		t.Error(err)
+	scroll, ok := page.ScrollProps["items"]
+	if !ok {
+		t.Error("expected scrollProps[items] to exist")
 	}
 
-	var page2 Page
-
-	err = json.NewDecoder(w.Result().Body).Decode(&page2)
-	if err != nil {
-		t.Error(err)
+	if scroll.PageName != "page" {
+		t.Errorf("expected pageName: page, got: %s", scroll.PageName)
 	}
 
-	if page2.Props["extra"] != "opt" {
-		t.Errorf("expected: opt, got: %v", page2.Props["extra"])
+	if scroll.CurrentPage != float64(1) {
+		t.Errorf("expected currentPage: 1, got: %v", scroll.CurrentPage)
+	}
+
+	if scroll.NextPage != float64(2) {
+		t.Errorf("expected nextPage: 2, got: %v", scroll.NextPage)
 	}
 }
 
-func TestRenderWithAlwaysProp(t *testing.T) {
+func TestRenderWithResetScrollProp(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
-	r.Header.Set(HeaderPartialComponent, "test/component")
-	r.Header.Set(HeaderPartialOnly, "title")
-	ctx := i.WithAlwaysProp(r.Context(), "errors", func() any { return map[string]string{} })
+	r.Header.Set(HeaderReset, "items")
+	ctx := i.WithScrollProp(r.Context(), "items", ScrollPageProp{
+		PageName:    "page",
+		CurrentPage: 1,
+	})
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	err := i.Render(w, r, "test/component", map[string]any{
-		"title": "Test",
-	})
+	err := i.Render(w, r, "test/component", nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -743,8 +852,13 @@ func TestRenderWithAlwaysProp(t *testing.T) {
 		t.Error(err)
 	}
 
-	if _, ok := page.Props["errors"]; !ok {
-		t.Error("expected always prop to be included even when not requested")
+	scroll, ok := page.ScrollProps["items"]
+	if !ok {
+		t.Error("expected scrollProps[items] to exist")
+	}
+
+	if !scroll.Reset {
+		t.Error("expected scrollProps[items].reset to be true")
 	}
 }
 
@@ -777,6 +891,108 @@ func TestRenderWithOnceProp(t *testing.T) {
 
 	if page.Props["title"] != "Test" {
 		t.Errorf("expected: Test, got: %v", page.Props["title"])
+	}
+
+	if page.OnceProps == nil {
+		t.Error("expected onceProps to be set")
+	}
+
+	if prop, ok := page.OnceProps["plans"]; !ok || prop.Prop != "plans" {
+		t.Errorf("expected onceProps[plans].prop = plans, got: %v", page.OnceProps)
+	}
+}
+
+func TestRenderWithOnceModifier(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithMergeProp(r.Context(), "activity", func() any { return []string{"a"} })
+	ctx = i.WithOnce(ctx, "activity", OncePageProp{})
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["activity"]; !ok {
+		t.Error("expected activity prop to be resolved")
+	}
+
+	if len(page.MergeProps) != 1 || page.MergeProps[0] != "activity" {
+		t.Errorf("expected mergeProps [activity], got: %v", page.MergeProps)
+	}
+
+	if prop, ok := page.OnceProps["activity"]; !ok || prop.Prop != "activity" {
+		t.Errorf("expected onceProps[activity].prop = activity, got: %v", page.OnceProps)
+	}
+}
+
+func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderExceptOnceProps, "activity")
+	ctx := i.WithMergeProp(r.Context(), "activity", func() any { return []string{"a"} })
+	ctx = i.WithOnce(ctx, "activity", OncePageProp{})
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := page.Props["activity"]; ok {
+		t.Error("expected activity prop to be excluded when in except-once")
+	}
+
+	if prop, ok := page.OnceProps["activity"]; !ok || prop.Prop != "activity" {
+		t.Errorf("expected onceProps metadata to remain, got: %v", page.OnceProps)
+	}
+}
+
+func TestRenderWithFlashProp(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithFlashProp(r.Context(), map[string]any{"success": "created"})
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if page.Flash == nil {
+		t.Error("expected flash to be set")
+	}
+
+	if page.Flash["success"] != "created" {
+		t.Errorf("expected: created, got: %v", page.Flash["success"])
 	}
 }
 
