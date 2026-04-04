@@ -105,6 +105,24 @@ inertiaManager.EnableSsrWithDefault(client)
 
 For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
 
+## Props
+
+| Prop Type | Method(s) | Evaluation | Full | Partial |
+|-----------|-----------|------------|------|---------|
+| Base | `Share`, `WithProp`, `Render` | Eager | ✅ | ✅ if requested |
+| Optional | `WithOptionalProp` | Lazy | ❌ | ✅ if requested |
+| Always | `WithAlwaysProp` | Lazy | ✅ | ✅ always |
+| Deferred | `WithDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
+| Merge | `WithMergeProp` | Lazy | ✅ | ✅ if requested |
+| Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
+| Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
+| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
+| Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
+| Flash | `WithFlashProp` | Eager | ✅ | ✅ |
+
+`WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
+`WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
+
 ## Examples
 
 The following examples show how to use the package.
@@ -141,24 +159,6 @@ r = r.WithContext(ctx)
 ```html
 <meta name="description" content="{{ .meta }}">
 ```
-
-### Props comparison
-
-| Prop Type | Method(s) | Evaluation | Full | Partial |
-|-----------|-----------|------------|------|---------|
-| Base | `Share`, `WithProp`, `Render` | Eager | ✅ | ✅ if requested |
-| Optional | `WithOptionalProp` | Lazy | ❌ | ✅ if requested |
-| Always | `WithAlwaysProp` | Lazy | ✅ | ✅ always |
-| Deferred | `WithDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
-| Merge | `WithMergeProp` | Lazy | ✅ | ✅ if requested |
-| Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
-| Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
-| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
-| Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
-| Flash | `WithFlashProp` | Eager | ✅ | ✅ |
-
-`WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
-`WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
 
 ### Share a prop (globally)
 
