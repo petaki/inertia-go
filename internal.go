@@ -251,7 +251,7 @@ func (i *Inertia) createOncePropsAndModifiers(r *http.Request, rt *runtime, page
 }
 
 func (i *Inertia) createFlashProps(r *http.Request, _ *runtime, page *Page) error {
-	flash, ok := r.Context().Value(contextKeyFlash).(map[string]any)
+	flash, ok := r.Context().Value(contextKeyFlashProp).(map[string]any)
 	if ok {
 		page.Flash = flash
 	}
