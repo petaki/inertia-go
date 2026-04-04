@@ -7,7 +7,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/fstest"
 )
+
+func TestNew(t *testing.T) {
+	i := New("http://inertia-go.test", "app.gohtml", "1")
+
+	if i.templateFS != nil {
+		t.Error("expected: nil, got: fs.FS")
+	}
+}
+
+func TestNewWithFS(t *testing.T) {
+	templateFS := fstest.MapFS{}
+
+	i := New("http://inertia-go.test", "app.gohtml", "1", templateFS)
+
+	if i.templateFS == nil {
+		t.Error("expected: fs.FS, got: nil")
+	}
+}
 
 func TestEnableSsr(t *testing.T) {
 	i := New("", "", "")
