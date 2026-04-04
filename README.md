@@ -144,18 +144,18 @@ r = r.WithContext(ctx)
 
 ### Props comparison
 
-| Prop Type | Method(s) | Evaluation | Full Render | Partial Render |
-|-----------|-----------|------------|-------------|----------------|
-| Base | `Share`, `WithProp`, `Render` | Eager | Included | Included if requested |
-| Optional | `WithOptionalProp` | Lazy | Excluded | Included if requested |
-| Always | `WithAlwaysProp` | Lazy | Included | Always included |
-| Deferred | `WithDeferredProp` | Lazy | Excluded (deferred) | Included if requested |
-| Merge | `WithMergeProp` | Lazy | Included | Included if requested |
-| Deep Merge | `WithDeepMergeProp` | Lazy | Included | Included if requested |
-| Prepend | `WithPrependProp` | Lazy | Included | Included if requested |
-| Scroll | `WithScrollProp` | — | Metadata only | Metadata only |
-| Once | `WithOnceProp`, `WithOnce` | Lazy | Included | Excluded if in except-once |
-| Flash | `WithFlashProp` | Eager | Included | Included |
+| Prop Type | Method(s) | Evaluation | Full | Partial |
+|-----------|-----------|------------|------|---------|
+| Base | `Share`, `WithProp`, `Render` | Eager | ✅ | ✅ if requested |
+| Optional | `WithOptionalProp` | Lazy | ❌ | ✅ if requested |
+| Always | `WithAlwaysProp` | Lazy | ✅ | ✅ always |
+| Deferred | `WithDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
+| Merge | `WithMergeProp` | Lazy | ✅ | ✅ if requested |
+| Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
+| Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
+| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
+| Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
+| Flash | `WithFlashProp` | Eager | ✅ | ✅ |
 
 `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
 `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
