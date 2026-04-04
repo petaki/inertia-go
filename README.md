@@ -304,7 +304,7 @@ r = r.WithContext(ctx)
 ctx := inertiaManager.WithMergeProp(r.Context(), "activity", func() any {
     return getActivity()
 })
-ctx = inertiaManager.WithOnce(ctx, "activity", inertia.OncePageProp{})
+ctx = inertiaManager.WithOnce(ctx, "activity")
 r = r.WithContext(ctx)
 ```
 
