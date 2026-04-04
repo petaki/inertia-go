@@ -319,7 +319,7 @@ ctx = inertiaManager.WithOnce(ctx, "permissions", inertia.OncePageProp{ExpiresAt
 r = r.WithContext(ctx)
 ```
 
-### Flash (context based)
+### Flash prop (context based)
 
 ```go
 ctx := inertiaManager.WithFlashProp(r.Context(), map[string]any{

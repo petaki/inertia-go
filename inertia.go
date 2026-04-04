@@ -172,7 +172,7 @@ func (i *Inertia) WithOnce(ctx context.Context, key string, prop ...OncePageProp
 
 // WithFlashProp function.
 func (i *Inertia) WithFlashProp(ctx context.Context, data map[string]any) context.Context {
-	return context.WithValue(ctx, contextKeyFlash, data)
+	return context.WithValue(ctx, contextKeyFlashProp, data)
 }
 
 // WithClearHistory function.

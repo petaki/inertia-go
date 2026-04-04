@@ -16,7 +16,7 @@ const (
 	contextKeyScrollProp     = contextKey("scrollProp")
 	contextKeyOnceProps      = contextKey("onceProps")
 	contextKeyOnce           = contextKey("once")
-	contextKeyFlash          = contextKey("flash")
+	contextKeyFlashProp      = contextKey("flash")
 	contextKeyClearHistory   = contextKey("clearHistory")
 	contextKeyEncryptHistory = contextKey("encryptHistory")
 )
