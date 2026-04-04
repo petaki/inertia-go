@@ -9,7 +9,6 @@ import (
 	"maps"
 	"net/http"
 	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -70,7 +69,7 @@ func (i *Inertia) EnableSsr(ssrURL string, client ...*http.Client) {
 
 // EnableSsrWithDefault function.
 func (i *Inertia) EnableSsrWithDefault(client ...*http.Client) {
-	i.EnableSsr("http://127.0.0.1:13714", client...)
+	i.EnableSsr("http://127.0.0.1:13714/render", client...)
 }
 
 // DisableSsr function.
@@ -482,7 +481,7 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		strings.ReplaceAll(i.ssrURL, "/render", "")+"/render",
+		i.ssrURL,
 		bytes.NewBuffer(body),
 	)
 	if err != nil {

@@ -45,7 +45,7 @@ func TestEnableSsrConcurrent(t *testing.T) {
 		defer close(done)
 
 		for range 100 {
-			i.EnableSsr("http://127.0.0.1:13714")
+			i.EnableSsr("http://127.0.0.1:13714/render")
 		}
 	}()
 
@@ -60,8 +60,8 @@ func TestEnableSsrWithDefault(t *testing.T) {
 	i := New("", "", "")
 	i.EnableSsrWithDefault()
 
-	if i.ssrURL != "http://127.0.0.1:13714" {
-		t.Errorf("expected: http://127.0.0.1:13714, got: %v", i.ssrURL)
+	if i.ssrURL != "http://127.0.0.1:13714/render" {
+		t.Errorf("expected: http://127.0.0.1:13714/render, got: %v", i.ssrURL)
 	}
 
 	if i.ssrClient == nil {
@@ -74,8 +74,8 @@ func TestEnableSsrWithDefaultWithClient(t *testing.T) {
 	client := &http.Client{}
 	i.EnableSsrWithDefault(client)
 
-	if i.ssrURL != "http://127.0.0.1:13714" {
-		t.Errorf("expected: http://127.0.0.1:13714, got: %v", i.ssrURL)
+	if i.ssrURL != "http://127.0.0.1:13714/render" {
+		t.Errorf("expected: http://127.0.0.1:13714/render, got: %v", i.ssrURL)
 	}
 
 	if i.ssrClient != client {
