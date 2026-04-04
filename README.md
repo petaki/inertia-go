@@ -387,6 +387,10 @@ r = r.WithContext(ctx)
 </html>
 ```
 
+## Vite Integration
+
+For Vite integration, check out the [Usage with Inertia](https://github.com/petaki/support-go#usage-with-inertia) section in the [petaki/support-go](https://github.com/petaki/support-go) package.
+
 ## Example Apps
 
 ### Satellite
