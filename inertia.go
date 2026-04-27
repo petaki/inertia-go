@@ -170,9 +170,14 @@ func (i *Inertia) WithOnce(ctx context.Context, key string, prop ...OncePageProp
 	return contextSet(ctx, contextKeyOnce, key, p)
 }
 
+// WithError function.
+func (i *Inertia) WithError(ctx context.Context, key string, value any) context.Context {
+	return contextSet(ctx, contextKeyErrors, key, value)
+}
+
 // WithFlashProp function.
 func (i *Inertia) WithFlashProp(ctx context.Context, data map[string]any) context.Context {
-	return context.WithValue(ctx, contextKeyFlashProp, data)
+	return context.WithValue(ctx, contextKeyFlash, data)
 }
 
 // WithClearHistory function.
@@ -235,7 +240,8 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		i.createScrollProps,
 		i.createOnceProps,
 		i.createOnceModifiers,
-		i.createFlashProps,
+		i.createErrorProps,
+		i.createFlashProp,
 	} {
 		err := create(r, rt, page)
 		if err != nil {
