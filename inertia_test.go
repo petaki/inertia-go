@@ -1120,11 +1120,11 @@ func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
 	}
 }
 
-func TestRenderWithFlashProp(t *testing.T) {
+func TestRenderWithFlash(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
-	ctx := i.WithFlashProp(r.Context(), map[string]any{"success": "created"})
+	ctx := i.WithFlash(r.Context(), map[string]any{"success": "created"})
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -1228,6 +1228,100 @@ func TestRenderWithEncryptHistory(t *testing.T) {
 
 	if !page.EncryptHistory {
 		t.Error("expected encryptHistory to be true")
+	}
+}
+
+func TestRenderWithErrorProps(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithErrorProp(r.Context(), "password", "Too short")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"errors": map[string]any{"email": "Invalid"},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	errors, ok := page.Props["errors"].(map[string]any)
+	if !ok {
+		t.Error("expected: errors map in props, got: empty value")
+	}
+
+	if errors["email"] != "Invalid" {
+		t.Errorf("expected: Invalid, got: %v", errors["email"])
+	}
+
+	if errors["password"] != "Too short" {
+		t.Errorf("expected: Too short, got: %v", errors["password"])
+	}
+}
+
+func TestRenderWithPreserveFragment(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithPreserveFragment(r.Context())
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if !page.PreserveFragment {
+		t.Error("expected preserveFragment to be true")
+	}
+}
+
+func TestRenderWithSharedProps(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	i.Share("title", "Test")
+	i.Share("locale", "en")
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expected := []string{"locale", "title"}
+	if len(page.SharedProps) != len(expected) {
+		t.Errorf("expected sharedProps: %v, got: %v", expected, page.SharedProps)
+	}
+
+	for idx, key := range expected {
+		if page.SharedProps[idx] != key {
+			t.Errorf("expected sharedProps[%d]: %s, got: %s", idx, key, page.SharedProps[idx])
+		}
 	}
 }
 

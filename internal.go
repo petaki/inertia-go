@@ -215,25 +215,19 @@ func (i *Inertia) createOnceModifiers(r *http.Request, rt *runtime, page *Page) 
 }
 
 func (i *Inertia) createErrorProps(r *http.Request, _ *runtime, page *Page) error {
-	errors, err := contextGet[map[string]any](r.Context(), contextKeyErrors)
+	contextErrors, err := contextGet[map[string]any](r.Context(), contextKeyErrors)
 	if err != nil {
 		return err
 	}
 
-	if errors == nil {
+	errors, ok := page.Props["errors"].(map[string]any)
+	if !ok {
 		errors = make(map[string]any)
 	}
 
+	maps.Copy(errors, contextErrors)
+
 	page.Props["errors"] = errors
-
-	return nil
-}
-
-func (i *Inertia) createFlashProp(r *http.Request, _ *runtime, page *Page) error {
-	flash, ok := r.Context().Value(contextKeyFlash).(map[string]any)
-	if ok {
-		page.Flash = flash
-	}
 
 	return nil
 }

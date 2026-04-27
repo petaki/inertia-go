@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"html/template"
 	"io/fs"
+	"maps"
 	"net/http"
+	"slices"
 	"sync"
 )
 
@@ -175,8 +177,8 @@ func (i *Inertia) WithErrorProp(ctx context.Context, key string, value any) cont
 	return contextSet(ctx, contextKeyErrors, key, value)
 }
 
-// WithFlashProp function.
-func (i *Inertia) WithFlashProp(ctx context.Context, data map[string]any) context.Context {
+// WithFlash function.
+func (i *Inertia) WithFlash(ctx context.Context, data map[string]any) context.Context {
 	return context.WithValue(ctx, contextKeyFlash, data)
 }
 
@@ -188,6 +190,11 @@ func (i *Inertia) WithClearHistory(ctx context.Context) context.Context {
 // WithEncryptHistory function.
 func (i *Inertia) WithEncryptHistory(ctx context.Context) context.Context {
 	return context.WithValue(ctx, contextKeyEncryptHistory, true)
+}
+
+// WithPreserveFragment function.
+func (i *Inertia) WithPreserveFragment(ctx context.Context) context.Context {
+	return context.WithValue(ctx, contextKeyPreserveFragment, true)
 }
 
 // Middleware function.
@@ -241,12 +248,20 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		i.createOnceProps,
 		i.createOnceModifiers,
 		i.createErrorProps,
-		i.createFlashProp,
 	} {
 		err := create(r, rt, page)
 		if err != nil {
 			return err
 		}
+	}
+
+	if len(i.sharedProps) > 0 {
+		page.SharedProps = slices.Sorted(maps.Keys(i.sharedProps))
+	}
+
+	flash, ok := r.Context().Value(contextKeyFlash).(map[string]any)
+	if ok {
+		page.Flash = flash
 	}
 
 	clearHistory, ok := r.Context().Value(contextKeyClearHistory).(bool)
@@ -257,6 +272,11 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	encryptHistory, ok := r.Context().Value(contextKeyEncryptHistory).(bool)
 	if ok {
 		page.EncryptHistory = encryptHistory
+	}
+
+	preserveFragment, ok := r.Context().Value(contextKeyPreserveFragment).(bool)
+	if ok {
+		page.PreserveFragment = preserveFragment
 	}
 
 	if r.Header.Get(HeaderInertia) != "" {

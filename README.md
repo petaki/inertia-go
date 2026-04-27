@@ -119,7 +119,6 @@ For more information, please read the official Server-side Rendering documentati
 | Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
 | Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
 | Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
-| Flash | `WithFlashProp` | Eager | ✅ | ✅ |
 
 `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
 `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
@@ -322,6 +321,8 @@ r = r.WithContext(ctx)
 
 ### Error prop (context based)
 
+Errors set via `WithErrorProp` are merged into the `errors` prop, including with any inline `errors` map passed to `Render`.
+
 ```go
 ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
 r = r.WithContext(ctx)
@@ -335,10 +336,10 @@ ctx = inertiaManager.WithErrorProp(ctx, "password", "Too short")
 r = r.WithContext(ctx)
 ```
 
-### Flash prop (context based)
+### Flash (context based)
 
 ```go
-ctx := inertiaManager.WithFlashProp(r.Context(), map[string]any{
+ctx := inertiaManager.WithFlash(r.Context(), map[string]any{
     "success": "Item created successfully",
 })
 r = r.WithContext(ctx)
@@ -355,6 +356,13 @@ r = r.WithContext(ctx)
 
 ```go
 ctx := inertiaManager.WithEncryptHistory(r.Context())
+r = r.WithContext(ctx)
+```
+
+### Preserve fragment (context based)
+
+```go
+ctx := inertiaManager.WithPreserveFragment(r.Context())
 r = r.WithContext(ctx)
 ```
 
