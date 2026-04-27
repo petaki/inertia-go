@@ -17,18 +17,20 @@ type ScrollPageProp struct {
 
 // Page type.
 type Page struct {
-	Component      string                    `json:"component"`
-	Props          map[string]any            `json:"props"`
-	URL            string                    `json:"url"`
-	Version        string                    `json:"version"`
-	DeferredProps  map[string][]string       `json:"deferredProps,omitempty"`
-	MergeProps     []string                  `json:"mergeProps,omitempty"`
-	DeepMergeProps []string                  `json:"deepMergeProps,omitempty"`
-	PrependProps   []string                  `json:"prependProps,omitempty"`
-	MatchPropsOn   []string                  `json:"matchPropsOn,omitempty"`
-	ScrollProps    map[string]ScrollPageProp `json:"scrollProps,omitempty"`
-	OnceProps      map[string]OncePageProp   `json:"onceProps,omitempty"`
-	Flash          map[string]any            `json:"flash,omitempty"`
-	ClearHistory   bool                      `json:"clearHistory,omitempty"`
-	EncryptHistory bool                      `json:"encryptHistory,omitempty"`
+	Component        string                    `json:"component"`
+	Props            map[string]any            `json:"props"`
+	URL              string                    `json:"url"`
+	Version          string                    `json:"version"`
+	SharedProps      []string                  `json:"sharedProps,omitempty"`
+	DeferredProps    map[string][]string       `json:"deferredProps,omitempty"`
+	MergeProps       []string                  `json:"mergeProps,omitempty"`
+	DeepMergeProps   []string                  `json:"deepMergeProps,omitempty"`
+	PrependProps     []string                  `json:"prependProps,omitempty"`
+	MatchPropsOn     []string                  `json:"matchPropsOn,omitempty"`
+	ScrollProps      map[string]ScrollPageProp `json:"scrollProps,omitempty"`
+	OnceProps        map[string]OncePageProp   `json:"onceProps,omitempty"`
+	Flash            map[string]any            `json:"flash,omitempty"`
+	ClearHistory     bool                      `json:"clearHistory,omitempty"`
+	EncryptHistory   bool                      `json:"encryptHistory,omitempty"`
+	PreserveFragment bool                      `json:"preserveFragment,omitempty"`
 }

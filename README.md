@@ -118,7 +118,7 @@ For more information, please read the official Server-side Rendering documentati
 | Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
 | Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
 | Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
-| Flash | `WithFlashProp` | Eager | ✅ | ✅ |
+| Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
 
 `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
 `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
@@ -191,8 +191,8 @@ r = r.WithContext(ctx)
 ### Always prop (context based)
 
 ```go
-ctx := inertiaManager.WithAlwaysProp(r.Context(), "errors", func() any {
-    return getErrors()
+ctx := inertiaManager.WithAlwaysProp(r.Context(), "notifications", func() any {
+    return getNotifications()
 })
 r = r.WithContext(ctx)
 ```
@@ -319,10 +319,27 @@ ctx = inertiaManager.WithOnce(ctx, "permissions", inertia.OncePageProp{ExpiresAt
 r = r.WithContext(ctx)
 ```
 
-### Flash prop (context based)
+### Error prop (context based)
+
+Errors set via `WithErrorProp` are merged with any inline `errors` map passed to `Render`.
 
 ```go
-ctx := inertiaManager.WithFlashProp(r.Context(), map[string]any{
+ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
+r = r.WithContext(ctx)
+```
+
+Or with multiple fields:
+
+```go
+ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
+ctx = inertiaManager.WithErrorProp(ctx, "password", "Too short")
+r = r.WithContext(ctx)
+```
+
+### Flash (context based)
+
+```go
+ctx := inertiaManager.WithFlash(r.Context(), map[string]any{
     "success": "Item created successfully",
 })
 r = r.WithContext(ctx)
@@ -339,6 +356,13 @@ r = r.WithContext(ctx)
 
 ```go
 ctx := inertiaManager.WithEncryptHistory(r.Context())
+r = r.WithContext(ctx)
+```
+
+### Preserve fragment (context based)
+
+```go
+ctx := inertiaManager.WithPreserveFragment(r.Context())
 r = r.WithContext(ctx)
 ```
 
