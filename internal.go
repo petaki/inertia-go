@@ -10,6 +10,49 @@ import (
 	"path/filepath"
 )
 
+func (i *Inertia) isSsrEnabled() bool {
+	return i.ssrURL != "" && i.ssrClient != nil
+}
+
+func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
+	body, err := json.Marshal(page)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		i.ssrURL,
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := i.ssrClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, ErrBadSsrStatusCode
+	}
+
+	var ssr Ssr
+
+	err = json.NewDecoder(resp.Body).Decode(&ssr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ssr, nil
+}
+
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	if i.parsedTemplate != nil {
 		return i.parsedTemplate, nil
@@ -33,6 +76,19 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	i.parsedTemplate = tpl
 
 	return i.parsedTemplate, nil
+}
+
+func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
+	contextViewData, err := contextGet[map[string]any](r.Context(), contextKeyViewData)
+	if err != nil {
+		return nil, err
+	}
+
+	viewData := make(map[string]any, len(i.sharedViewData))
+	maps.Copy(viewData, i.sharedViewData)
+	maps.Copy(viewData, contextViewData)
+
+	return viewData, nil
 }
 
 func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) error {
@@ -244,60 +300,4 @@ func (i *Inertia) createMergeableProps(r *http.Request, rt *runtime, page *Page,
 	}
 
 	return nil
-}
-
-func (i *Inertia) createViewData(r *http.Request) (map[string]any, error) {
-	contextViewData, err := contextGet[map[string]any](r.Context(), contextKeyViewData)
-	if err != nil {
-		return nil, err
-	}
-
-	viewData := make(map[string]any, len(i.sharedViewData))
-	maps.Copy(viewData, i.sharedViewData)
-	maps.Copy(viewData, contextViewData)
-
-	return viewData, nil
-}
-
-func (i *Inertia) isSsrEnabled() bool {
-	return i.ssrURL != "" && i.ssrClient != nil
-}
-
-func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
-	body, err := json.Marshal(page)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodPost,
-		i.ssrURL,
-		bytes.NewBuffer(body),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := i.ssrClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 400 {
-		return nil, ErrBadSsrStatusCode
-	}
-
-	var ssr Ssr
-
-	err = json.NewDecoder(resp.Body).Decode(&ssr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ssr, nil
 }
