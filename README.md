@@ -192,8 +192,8 @@ r = r.WithContext(ctx)
 ### Always prop (context based)
 
 ```go
-ctx := inertiaManager.WithAlwaysProp(r.Context(), "errors", func() any {
-    return getErrors()
+ctx := inertiaManager.WithAlwaysProp(r.Context(), "notifications", func() any {
+    return getNotifications()
 })
 r = r.WithContext(ctx)
 ```
@@ -321,8 +321,6 @@ r = r.WithContext(ctx)
 ```
 
 ### Error prop (context based)
-
-The `errors` prop is always present in the response (defaults to `{}`).
 
 ```go
 ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
