@@ -365,6 +365,27 @@ func TestWithProp(t *testing.T) {
 	}
 }
 
+func TestWithErrorProp(t *testing.T) {
+	ctx := context.TODO()
+
+	i := New("", "", "")
+	ctx = i.WithErrorProp(ctx, "email", "Invalid email")
+
+	contextErrors, ok := ctx.Value(contextKeyErrors).(map[string]any)
+	if !ok {
+		t.Error("expected: context errors, got: empty value")
+	}
+
+	message, ok := contextErrors["email"].(string)
+	if !ok {
+		t.Error("expected: email, got: empty value")
+	}
+
+	if message != "Invalid email" {
+		t.Errorf("expected: Invalid email, got: %s", message)
+	}
+}
+
 func TestMiddlewareWithNormalRequest(t *testing.T) {
 	url := "http://inertia-go.test"
 

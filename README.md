@@ -118,6 +118,7 @@ For more information, please read the official Server-side Rendering documentati
 | Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
 | Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
 | Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
+| Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
 | Flash | `WithFlashProp` | Eager | ✅ | ✅ |
 
 `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
@@ -316,6 +317,23 @@ ctx := inertiaManager.WithDeferredProp(r.Context(), "permissions", func() any {
     return getPermissions()
 })
 ctx = inertiaManager.WithOnce(ctx, "permissions", inertia.OncePageProp{ExpiresAt: &expiresAt})
+r = r.WithContext(ctx)
+```
+
+### Error prop (context based)
+
+The `errors` prop is always present in the response (defaults to `{}`).
+
+```go
+ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
+r = r.WithContext(ctx)
+```
+
+Or with multiple fields:
+
+```go
+ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
+ctx = inertiaManager.WithErrorProp(ctx, "password", "Too short")
 r = r.WithContext(ctx)
 ```
 

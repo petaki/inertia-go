@@ -170,8 +170,8 @@ func (i *Inertia) WithOnce(ctx context.Context, key string, prop ...OncePageProp
 	return contextSet(ctx, contextKeyOnce, key, p)
 }
 
-// WithError function.
-func (i *Inertia) WithError(ctx context.Context, key string, value any) context.Context {
+// WithErrorProp function.
+func (i *Inertia) WithErrorProp(ctx context.Context, key string, value any) context.Context {
 	return contextSet(ctx, contextKeyErrors, key, value)
 }
 
