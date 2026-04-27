@@ -321,7 +321,7 @@ r = r.WithContext(ctx)
 
 ### Error prop (context based)
 
-Errors set via `WithErrorProp` are merged into the `errors` prop, including with any inline `errors` map passed to `Render`.
+Errors set via `WithErrorProp` are merged with any inline `errors` map passed to `Render`.
 
 ```go
 ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
