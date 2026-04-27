@@ -117,11 +117,13 @@ For more information, please read the official Server-side Rendering documentati
 | Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
 | Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
 | Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
-| Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ❌ if in except-once |
+| Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ✅ if requested |
 | Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
 
-`WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
-`WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
+- `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
+- `WithOnceProp` and `WithOnce` props are excluded when listed in the `X-Inertia-Except-Once-Props` header.
+- `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
+- `WithErrorProp` errors are merged with any inline `errors` map passed to `Render`.
 
 ## Examples
 
@@ -320,8 +322,6 @@ r = r.WithContext(ctx)
 ```
 
 ### Error prop (context based)
-
-Errors set via `WithErrorProp` are merged with any inline `errors` map passed to `Render`.
 
 ```go
 ctx := inertiaManager.WithErrorProp(r.Context(), "email", "Invalid email")
