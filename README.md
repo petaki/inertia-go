@@ -105,10 +105,10 @@ inertiaManager.EnableSsrWithDefault(client)
 
 For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
 
-## Props
+## Page Props
 
-| Prop Type | Method(s) | Evaluation | Full | Partial |
-|-----------|-----------|------------|------|---------|
+| Name | Method(s) | Evaluation | Full | Partial |
+|------|-----------|------------|------|---------|
 | Base | `Share`, `WithProp`, `Render` | Eager | ✅ | ✅ if requested |
 | Optional | `WithOptionalProp` | Lazy | ❌ | ✅ if requested |
 | Always | `WithAlwaysProp` | Lazy | ✅ | ✅ always |
@@ -124,6 +124,17 @@ For more information, please read the official Server-side Rendering documentati
 - `WithOnceProp` and `WithOnce` props are excluded when listed in the `X-Inertia-Except-Once-Props` header.
 - `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
 - `WithErrorProp` errors are merged with any inline `errors` map passed to `Render`.
+
+## Page Settings
+
+| Name | Method(s) | Evaluation | Full | Partial |
+|------|-----------|------------|------|---------|
+| Flash | `WithFlash` | Eager | ✅ | ✅ |
+| Clear History | `WithClearHistory` | Eager | ✅ | ✅ |
+| Encrypt History | `WithEncryptHistory` | Eager | ✅ | ✅ |
+| Preserve Fragment | `WithPreserveFragment` | Eager | ✅ | ✅ |
+
+- `WithClearHistory`, `WithEncryptHistory`, and `WithPreserveFragment` are emitted only when set to `true`.
 
 ## Examples
 
