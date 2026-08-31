@@ -561,6 +561,38 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestRenderConcurrent(t *testing.T) {
+	templateFS := fstest.MapFS{
+		"app.gohtml": &fstest.MapFile{
+			Data: []byte(`<div id="app" data-page="{{ marshal .page }}"></div>`),
+		},
+	}
+
+	i := New("http://inertia-go.test", "app.gohtml", "", templateFS)
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for range 100 {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			w := httptest.NewRecorder()
+
+			i.Render(w, r, "test/component", nil)
+		}
+	}()
+
+	for range 100 {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+
+		i.Render(w, r, "test/component", nil)
+	}
+
+	<-done
+}
+
 func TestRenderWithSharedProps(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	i.Share("title", "Test")

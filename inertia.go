@@ -14,6 +14,7 @@ import (
 // Inertia type.
 type Inertia struct {
 	mu             sync.RWMutex
+	templateMu     sync.Mutex
 	url            string
 	rootTemplate   string
 	version        string
