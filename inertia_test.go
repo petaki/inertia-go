@@ -494,6 +494,10 @@ func TestMiddlewareWithInertiaRequest(t *testing.T) {
 		t.Errorf("expected location: %s, got: %s", url+"/", loc)
 	}
 
+	if resp.Header.Get(HeaderVersion) != "abc123" {
+		t.Errorf("expected version: abc123, got: %s", resp.Header.Get(HeaderVersion))
+	}
+
 	if len(body) != 0 {
 		t.Errorf("expected empty body, got: %s", body)
 	}

@@ -214,6 +214,7 @@ func (i *Inertia) Middleware(next http.Handler) http.Handler {
 
 		if r.Method == http.MethodGet && r.Header.Get(HeaderVersion) != version {
 			w.Header().Set(HeaderLocation, url+r.RequestURI)
+			w.Header().Set(HeaderVersion, version)
 			w.WriteHeader(http.StatusConflict)
 
 			return
@@ -280,11 +281,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		page.PreserveFragment = preserveFragment
 	}
 
-	if w.Header().Get("Vary") == "" {
-		w.Header().Set("Vary", HeaderInertia)
-	} else {
-		w.Header().Add("Vary", HeaderInertia)
-	}
+	i.createVaryHeader(w)
 
 	if r.Header.Get(HeaderInertia) != "" {
 		js, err := json.Marshal(page)

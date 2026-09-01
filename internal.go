@@ -53,6 +53,14 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 	return &ssr, nil
 }
 
+func (i *Inertia) createVaryHeader(w http.ResponseWriter) {
+	if w.Header().Get("Vary") == "" {
+		w.Header().Set("Vary", HeaderInertia)
+	} else {
+		w.Header().Add("Vary", HeaderInertia)
+	}
+}
+
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
 	i.templateMu.Lock()
 	defer i.templateMu.Unlock()
