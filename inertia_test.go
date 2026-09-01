@@ -501,7 +501,13 @@ func TestMiddlewareWithInertiaRequest(t *testing.T) {
 
 func TestRender(t *testing.T) {
 	url := "http://inertia-go.test"
-	i := New(url, "", "")
+	templateFS := fstest.MapFS{
+		"app.gohtml": &fstest.MapFile{
+			Data: []byte(`<div id="app" data-page="{{ marshal .page }}"></div>`),
+		},
+	}
+
+	i := New(url, "app.gohtml", "", templateFS)
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	w := httptest.NewRecorder()
@@ -521,7 +527,7 @@ func TestRender(t *testing.T) {
 
 	varyValues := resp.Header.Values("Vary")
 	if len(varyValues) != 1 {
-		t.Errorf("expected 1 Vary value, got: %d", len(varyValues))
+		t.Fatalf("expected 1 Vary value, got: %d", len(varyValues))
 	}
 
 	if varyValues[0] != HeaderInertia {
@@ -559,6 +565,61 @@ func TestRender(t *testing.T) {
 	if userID != 1 {
 		t.Errorf("expected: 1, got: %.2f", userID)
 	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	resp = w.Result()
+
+	if resp.Header.Get("Content-Type") != "text/html" {
+		t.Errorf("expected: text/html, got: %s", resp.Header.Get("Content-Type"))
+	}
+
+	varyValues = resp.Header.Values("Vary")
+	if len(varyValues) != 1 {
+		t.Fatalf("expected 1 Vary value, got: %d", len(varyValues))
+	}
+
+	if varyValues[0] != HeaderInertia {
+		t.Errorf("expected: %s, got: %s", HeaderInertia, varyValues[0])
+	}
+}
+
+func TestRenderConcurrent(t *testing.T) {
+	templateFS := fstest.MapFS{
+		"app.gohtml": &fstest.MapFile{
+			Data: []byte(`<div id="app" data-page="{{ marshal .page }}"></div>`),
+		},
+	}
+
+	i := New("http://inertia-go.test", "app.gohtml", "", templateFS)
+
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+
+		for range 100 {
+			r := httptest.NewRequest(http.MethodGet, "/", nil)
+			w := httptest.NewRecorder()
+
+			i.Render(w, r, "test/component", nil)
+		}
+	}()
+
+	for range 100 {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
+
+		i.Render(w, r, "test/component", nil)
+	}
+
+	<-done
 }
 
 func TestRenderWithSharedProps(t *testing.T) {

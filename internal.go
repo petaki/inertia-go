@@ -54,6 +54,9 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
+	i.templateMu.Lock()
+	defer i.templateMu.Unlock()
+
 	if i.parsedTemplate != nil {
 		return i.parsedTemplate, nil
 	}
