@@ -299,12 +299,20 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return err
 	}
 
-	i.mu.RUnlock()
-	rootTemplate, err := i.createRootTemplate()
-	i.mu.RLock()
+	rootTemplate := i.parsedTemplate
 
-	if err != nil {
-		return err
+	if rootTemplate == nil {
+		var err error
+
+		rootTemplate, err = func() (*template.Template, error) {
+			i.mu.RUnlock()
+			defer i.mu.RLock()
+
+			return i.createRootTemplate()
+		}()
+		if err != nil {
+			return err
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -319,10 +327,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	if i.isSsrEnabled() {
 		ssrURL, ssrClient := i.ssrURL, i.ssrClient
 
-		i.mu.RUnlock()
-		ssr, err := i.ssr(r.Context(), ssrURL, ssrClient, page)
-		i.mu.RLock()
+		ssr, err := func() (*Ssr, error) {
+			i.mu.RUnlock()
+			defer i.mu.RLock()
 
+			return i.ssr(r.Context(), ssrURL, ssrClient, page)
+		}()
 		if err != nil {
 			return err
 		}
