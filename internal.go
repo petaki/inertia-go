@@ -62,14 +62,6 @@ func (i *Inertia) createVaryHeader(w http.ResponseWriter) {
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
-	i.mu.RLock()
-	parsedTemplate := i.parsedTemplate
-	i.mu.RUnlock()
-
-	if parsedTemplate != nil {
-		return parsedTemplate, nil
-	}
-
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
