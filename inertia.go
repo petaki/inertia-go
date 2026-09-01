@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"slices"
 	"sync"
+	"time"
 )
 
 // Inertia type.
 type Inertia struct {
 	mu             sync.RWMutex
-	templateMu     sync.Mutex
 	url            string
 	rootTemplate   string
 	version        string
@@ -63,7 +63,9 @@ func (i *Inertia) EnableSsr(ssrURL string, client ...*http.Client) {
 	if len(client) > 0 && client[0] != nil {
 		i.ssrClient = client[0]
 	} else {
-		i.ssrClient = &http.Client{}
+		i.ssrClient = &http.Client{
+			Timeout: 30 * time.Second,
+		}
 	}
 }
 
@@ -214,6 +216,7 @@ func (i *Inertia) Middleware(next http.Handler) http.Handler {
 
 		if r.Method == http.MethodGet && r.Header.Get(HeaderVersion) != version {
 			w.Header().Set(HeaderLocation, url+r.RequestURI)
+			w.Header().Set(HeaderVersion, version)
 			w.WriteHeader(http.StatusConflict)
 
 			return
@@ -280,11 +283,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		page.PreserveFragment = preserveFragment
 	}
 
-	if w.Header().Get("Vary") == "" {
-		w.Header().Set("Vary", HeaderInertia)
-	} else {
-		w.Header().Add("Vary", HeaderInertia)
-	}
+	i.createVaryHeader(w)
 
 	if r.Header.Get(HeaderInertia) != "" {
 		js, err := json.Marshal(page)
@@ -300,7 +299,10 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return err
 	}
 
+	i.mu.RUnlock()
 	rootTemplate, err := i.createRootTemplate()
+	i.mu.RLock()
+
 	if err != nil {
 		return err
 	}
@@ -315,7 +317,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	viewData["page"] = page
 
 	if i.isSsrEnabled() {
-		ssr, err := i.ssr(r.Context(), page)
+		ssrURL, ssrClient := i.ssrURL, i.ssrClient
+
+		i.mu.RUnlock()
+		ssr, err := i.ssr(r.Context(), ssrURL, ssrClient, page)
+		i.mu.RLock()
+
 		if err != nil {
 			return err
 		}

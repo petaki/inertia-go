@@ -14,7 +14,7 @@ func (i *Inertia) isSsrEnabled() bool {
 	return i.ssrURL != "" && i.ssrClient != nil
 }
 
-func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
+func (i *Inertia) ssr(ctx context.Context, ssrURL string, ssrClient *http.Client, page *Page) (*Ssr, error) {
 	body, err := json.Marshal(page)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		i.ssrURL,
+		ssrURL,
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
@@ -32,7 +32,7 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := i.ssrClient.Do(req)
+	resp, err := ssrClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +53,25 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 	return &ssr, nil
 }
 
+func (i *Inertia) createVaryHeader(w http.ResponseWriter) {
+	if w.Header().Get("Vary") == "" {
+		w.Header().Set("Vary", HeaderInertia)
+	} else {
+		w.Header().Add("Vary", HeaderInertia)
+	}
+}
+
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
-	i.templateMu.Lock()
-	defer i.templateMu.Unlock()
+	i.mu.RLock()
+	parsedTemplate := i.parsedTemplate
+	i.mu.RUnlock()
+
+	if parsedTemplate != nil {
+		return parsedTemplate, nil
+	}
+
+	i.mu.Lock()
+	defer i.mu.Unlock()
 
 	if i.parsedTemplate != nil {
 		return i.parsedTemplate, nil
@@ -251,7 +267,7 @@ func (i *Inertia) createMainProps(r *http.Request, rt *runtime, page *Page, key 
 		case contextKeyOptionalProps:
 			if rt.isPartial {
 				_, ok = rt.only[k]
-				if ok {
+				if len(rt.only) == 0 || ok {
 					page.Props[k] = value()
 				}
 			}

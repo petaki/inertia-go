@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"testing/fstest"
+	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -37,7 +38,11 @@ func TestEnableSsr(t *testing.T) {
 	}
 
 	if i.ssrClient == nil {
-		t.Error("expected: *http.Client, got: nil")
+		t.Fatal("expected: *http.Client, got: nil")
+	}
+
+	if i.ssrClient.Timeout != 30*time.Second {
+		t.Errorf("expected: %v, got: %v", 30*time.Second, i.ssrClient.Timeout)
 	}
 }
 
@@ -492,6 +497,10 @@ func TestMiddlewareWithInertiaRequest(t *testing.T) {
 
 	if loc != url+"/" {
 		t.Errorf("expected location: %s, got: %s", url+"/", loc)
+	}
+
+	if resp.Header.Get(HeaderVersion) != "abc123" {
+		t.Errorf("expected version: abc123, got: %s", resp.Header.Get(HeaderVersion))
 	}
 
 	if len(body) != 0 {
@@ -1359,6 +1368,7 @@ func TestRenderWithPartialExcept(t *testing.T) {
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderPartialComponent, "test/component")
 	r.Header.Set(HeaderPartialExcept, "secret")
+	r = r.WithContext(i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" }))
 	w := httptest.NewRecorder()
 
 	err := i.Render(w, r, "test/component", map[string]any{
@@ -1382,6 +1392,10 @@ func TestRenderWithPartialExcept(t *testing.T) {
 
 	if page.Props["title"] != "Test" {
 		t.Errorf("expected: Test, got: %v", page.Props["title"])
+	}
+
+	if page.Props["extra"] != "opt" {
+		t.Errorf("expected: opt, got: %v", page.Props["extra"])
 	}
 }
 
