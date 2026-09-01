@@ -280,16 +280,16 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		page.PreserveFragment = preserveFragment
 	}
 
+	if w.Header().Get("Vary") == "" {
+		w.Header().Set("Vary", HeaderInertia)
+	} else {
+		w.Header().Add("Vary", HeaderInertia)
+	}
+
 	if r.Header.Get(HeaderInertia) != "" {
 		js, err := json.Marshal(page)
 		if err != nil {
 			return err
-		}
-
-		if w.Header().Get("Vary") == "" {
-			w.Header().Set("Vary", HeaderInertia)
-		} else {
-			w.Header().Add("Vary", HeaderInertia)
 		}
 
 		w.Header().Set(HeaderInertia, "true")
