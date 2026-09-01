@@ -1363,6 +1363,7 @@ func TestRenderWithPartialExcept(t *testing.T) {
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderPartialComponent, "test/component")
 	r.Header.Set(HeaderPartialExcept, "secret")
+	r = r.WithContext(i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" }))
 	w := httptest.NewRecorder()
 
 	err := i.Render(w, r, "test/component", map[string]any{
@@ -1386,6 +1387,10 @@ func TestRenderWithPartialExcept(t *testing.T) {
 
 	if page.Props["title"] != "Test" {
 		t.Errorf("expected: Test, got: %v", page.Props["title"])
+	}
+
+	if page.Props["extra"] != "opt" {
+		t.Errorf("expected: opt, got: %v", page.Props["extra"])
 	}
 }
 

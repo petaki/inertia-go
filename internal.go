@@ -259,7 +259,7 @@ func (i *Inertia) createMainProps(r *http.Request, rt *runtime, page *Page, key 
 		case contextKeyOptionalProps:
 			if rt.isPartial {
 				_, ok = rt.only[k]
-				if ok {
+				if len(rt.only) == 0 || ok {
 					page.Props[k] = value()
 				}
 			}
