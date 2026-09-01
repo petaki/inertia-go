@@ -15,7 +15,6 @@ import (
 // Inertia type.
 type Inertia struct {
 	mu             sync.RWMutex
-	templateMu     sync.Mutex
 	url            string
 	rootTemplate   string
 	version        string
@@ -300,7 +299,10 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return err
 	}
 
+	i.mu.RUnlock()
 	rootTemplate, err := i.createRootTemplate()
+	i.mu.RLock()
+
 	if err != nil {
 		return err
 	}
