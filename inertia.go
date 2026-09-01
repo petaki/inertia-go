@@ -317,7 +317,12 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	viewData["page"] = page
 
 	if i.isSsrEnabled() {
-		ssr, err := i.ssr(r.Context(), page)
+		ssrURL, ssrClient := i.ssrURL, i.ssrClient
+
+		i.mu.RUnlock()
+		ssr, err := i.ssr(r.Context(), ssrURL, ssrClient, page)
+		i.mu.RLock()
+
 		if err != nil {
 			return err
 		}

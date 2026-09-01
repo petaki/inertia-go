@@ -14,7 +14,7 @@ func (i *Inertia) isSsrEnabled() bool {
 	return i.ssrURL != "" && i.ssrClient != nil
 }
 
-func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
+func (i *Inertia) ssr(ctx context.Context, ssrURL string, ssrClient *http.Client, page *Page) (*Ssr, error) {
 	body, err := json.Marshal(page)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		i.ssrURL,
+		ssrURL,
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
@@ -32,7 +32,7 @@ func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := i.ssrClient.Do(req)
+	resp, err := ssrClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
