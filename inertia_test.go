@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"testing/fstest"
+	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -37,7 +38,11 @@ func TestEnableSsr(t *testing.T) {
 	}
 
 	if i.ssrClient == nil {
-		t.Error("expected: *http.Client, got: nil")
+		t.Fatal("expected: *http.Client, got: nil")
+	}
+
+	if i.ssrClient.Timeout != 30*time.Second {
+		t.Errorf("expected: %v, got: %v", 30*time.Second, i.ssrClient.Timeout)
 	}
 }
 

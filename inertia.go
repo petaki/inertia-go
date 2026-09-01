@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"slices"
 	"sync"
+	"time"
 )
 
 // Inertia type.
@@ -63,7 +64,9 @@ func (i *Inertia) EnableSsr(ssrURL string, client ...*http.Client) {
 	if len(client) > 0 && client[0] != nil {
 		i.ssrClient = client[0]
 	} else {
-		i.ssrClient = &http.Client{}
+		i.ssrClient = &http.Client{
+			Timeout: 30 * time.Second,
+		}
 	}
 }
 
