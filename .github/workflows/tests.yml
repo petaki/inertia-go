@@ -4,9 +4,6 @@ on:
   push:
   pull_request:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +22,6 @@ jobs:
         run: go vet ./...
 
       - name: Staticcheck
-        uses: dominikh/staticcheck-action@v1.4.1
-        with:
-          version: '2026.2'
-          install-go: false
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@2026.2
+          $(go env GOPATH)/bin/staticcheck ./...
