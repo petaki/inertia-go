@@ -92,7 +92,7 @@ Or with the Vite dev server:
 inertiaManager.EnableSsr("http://localhost:5173/__inertia_ssr")
 ```
 
-You can also provide a custom `*http.Client`:
+The default `*http.Client` uses a 30 second timeout. You can also provide a custom `*http.Client`:
 
 ```go
 client := &http.Client{
@@ -112,16 +112,18 @@ For more information, please read the official Server-side Rendering documentati
 | Base | `Share`, `WithProp`, `Render` | Eager | ✅ | ✅ if requested |
 | Optional | `WithOptionalProp` | Lazy | ❌ | ✅ if requested |
 | Always | `WithAlwaysProp` | Lazy | ✅ | ✅ always |
-| Deferred | `WithDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
+| Deferred | `WithDeferredProp`, `WithRescuedDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
 | Merge | `WithMergeProp` | Lazy | ✅ | ✅ if requested |
 | Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
 | Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
-| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata |
+| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata if requested |
 | Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ✅ if requested |
 | Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
 
 - `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
-- `WithOnceProp` and `WithOnce` props are excluded when listed in the `X-Inertia-Except-Once-Props` header.
+- `WithOnceProp` and `WithOnce` props are excluded by the `X-Inertia-Except-Once-Props` header.
+- Except-once is ignored when a partial reload explicitly requests the prop.
+- `WithRescuedDeferredProp` omits the prop and adds its key to `rescuedProps` on error.
 - `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
 - `WithErrorProp` errors are merged with any inline `errors` map passed to `Render`.
 
@@ -228,6 +230,20 @@ ctx := inertiaManager.WithDeferredProp(r.Context(), "comments", func() any {
 r = r.WithContext(ctx)
 ```
 
+### Rescued deferred prop (context based)
+
+```go
+ctx := inertiaManager.WithRescuedDeferredProp(r.Context(), "comments", func() (any, error) {
+    comments, err := getComments()
+    if err != nil {
+        return nil, err
+    }
+
+    return comments, nil
+})
+r = r.WithContext(ctx)
+```
+
 ### Merge prop (context based)
 
 ```go
@@ -300,6 +316,16 @@ ctx := inertiaManager.WithScrollProp(r.Context(), "items", inertia.ScrollPagePro
     NextPage:    2,
 })
 r = r.WithContext(ctx)
+```
+
+The client sends the merge direction in the `inertia.HeaderScrollMergeIntent` header, use it to choose between a merge and a prepend prop:
+
+```go
+if r.Header.Get(inertia.HeaderScrollMergeIntent) == "prepend" {
+    ctx = inertiaManager.WithPrependProp(ctx, "items", getItems)
+} else {
+    ctx = inertiaManager.WithMergeProp(ctx, "items", getItems)
+}
 ```
 
 ### Once prop (context based)
