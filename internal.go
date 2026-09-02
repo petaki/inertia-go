@@ -191,16 +191,24 @@ func (i *Inertia) createScrollProps(r *http.Request, rt *runtime, page *Page) er
 	}
 
 	for key, prop := range scrollProps {
-		if page.ScrollProps == nil {
-			page.ScrollProps = make(map[string]ScrollPageProp)
-		}
-
-		_, ok := rt.reset[key]
+		_, ok := rt.except[key]
 		if ok {
-			prop.Reset = true
+			continue
 		}
 
-		page.ScrollProps[key] = prop
+		_, ok = rt.only[key]
+		if len(rt.only) == 0 || ok {
+			if page.ScrollProps == nil {
+				page.ScrollProps = make(map[string]ScrollPageProp)
+			}
+
+			_, ok = rt.reset[key]
+			if ok {
+				prop.Reset = true
+			}
+
+			page.ScrollProps[key] = prop
+		}
 	}
 
 	return nil
@@ -217,14 +225,24 @@ func (i *Inertia) createOnceModifiers(r *http.Request, rt *runtime, page *Page) 
 	}
 
 	for key, prop := range onceModifiers {
+		_, ok := rt.except[key]
+		if ok {
+			continue
+		}
+
+		_, ok = rt.only[key]
+		if len(rt.only) != 0 && !ok {
+			continue
+		}
+
 		if page.OnceProps == nil {
 			page.OnceProps = make(map[string]OncePageProp)
 		}
 
 		page.OnceProps[key] = prop
 
-		_, ok := rt.exceptOnce[key]
-		if ok {
+		_, ok = rt.exceptOnce[key]
+		if ok && len(rt.only) == 0 {
 			delete(page.Props, key)
 		}
 	}
@@ -257,21 +275,27 @@ func (i *Inertia) createMainProps(r *http.Request, rt *runtime, page *Page, key 
 	}
 
 	for k, value := range props {
+		if key == contextKeyAlwaysProps {
+			page.Props[k] = value()
+
+			continue
+		}
+
 		_, ok := rt.except[k]
 		if ok {
+			continue
+		}
+
+		_, ok = rt.only[k]
+		if len(rt.only) != 0 && !ok {
 			continue
 		}
 
 		switch key {
 		case contextKeyOptionalProps:
 			if rt.isPartial {
-				_, ok = rt.only[k]
-				if len(rt.only) == 0 || ok {
-					page.Props[k] = value()
-				}
+				page.Props[k] = value()
 			}
-		case contextKeyAlwaysProps:
-			page.Props[k] = value()
 		case contextKeyOnceProps:
 			if page.OnceProps == nil {
 				page.OnceProps = make(map[string]OncePageProp)
@@ -280,11 +304,8 @@ func (i *Inertia) createMainProps(r *http.Request, rt *runtime, page *Page, key 
 			page.OnceProps[k] = OncePageProp{Prop: k}
 
 			_, exceptOnce := rt.exceptOnce[k]
-			if !exceptOnce {
-				_, ok = rt.only[k]
-				if len(rt.only) == 0 || ok {
-					page.Props[k] = value()
-				}
+			if !exceptOnce || len(rt.only) != 0 {
+				page.Props[k] = value()
 			}
 		}
 	}

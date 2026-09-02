@@ -744,6 +744,29 @@ func TestRenderWithAlwaysProp(t *testing.T) {
 	if _, ok := page.Props["errors"]; !ok {
 		t.Error("expected always prop to be included even when not requested")
 	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialExcept, "notice")
+	r = r.WithContext(i.WithAlwaysProp(r.Context(), "notice", func() any { return "always here" }))
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var excepted Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&excepted)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if excepted.Props["notice"] != "always here" {
+		t.Errorf("expected always prop to be immune to except, got: %v", excepted.Props["notice"])
+	}
 }
 
 func TestRenderWithDeferredProp(t *testing.T) {
@@ -1092,6 +1115,34 @@ func TestRenderWithScrollProp(t *testing.T) {
 	if scroll.NextPage != float64(2) {
 		t.Errorf("expected nextPage: 2, got: %v", scroll.NextPage)
 	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "items")
+	ctx = i.WithScrollProp(r.Context(), "comments", ScrollPageProp{PageName: "commentPage"})
+	r = r.WithContext(i.WithScrollProp(ctx, "items", ScrollPageProp{PageName: "page"}))
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var partial Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&partial)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := partial.ScrollProps["items"]; !ok {
+		t.Error("expected scrollProps[items] on a partial reload")
+	}
+
+	if _, ok := partial.ScrollProps["comments"]; ok {
+		t.Error("expected scrollProps[comments] to be excluded from a partial reload")
+	}
 }
 
 func TestRenderWithResetScrollProp(t *testing.T) {
@@ -1166,6 +1217,29 @@ func TestRenderWithOnceProp(t *testing.T) {
 	if prop, ok := page.OnceProps["plans"]; !ok || prop.Prop != "plans" {
 		t.Errorf("expected onceProps[plans].prop = plans, got: %v", page.OnceProps)
 	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "other")
+	r = r.WithContext(i.WithOnceProp(r.Context(), "settings", func() any { return "s" }))
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var partial Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&partial)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := partial.OnceProps["settings"]; ok {
+		t.Error("expected onceProps[settings] to be excluded from partial reload")
+	}
 }
 
 func TestRenderWithOnceModifier(t *testing.T) {
@@ -1200,6 +1274,29 @@ func TestRenderWithOnceModifier(t *testing.T) {
 	if prop, ok := page.OnceProps["activity"]; !ok || prop.Prop != "activity" {
 		t.Errorf("expected onceProps[activity].prop = activity, got: %v", page.OnceProps)
 	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialExcept, "activity")
+	r = r.WithContext(i.WithOnce(r.Context(), "activity"))
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var excepted Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&excepted)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := excepted.OnceProps["activity"]; ok {
+		t.Error("expected onceProps[activity] to be excluded from partial reload")
+	}
 }
 
 func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
@@ -1230,6 +1327,31 @@ func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
 
 	if prop, ok := page.OnceProps["activity"]; !ok || prop.Prop != "activity" {
 		t.Errorf("expected onceProps metadata to remain, got: %v", page.OnceProps)
+	}
+
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderExceptOnceProps, "activity")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "activity")
+	ctx = i.WithMergeProp(r.Context(), "activity", func() any { return []string{"a"} })
+	r = r.WithContext(i.WithOnce(ctx, "activity"))
+	w = httptest.NewRecorder()
+
+	err = i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var requested Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&requested)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if _, ok := requested.Props["activity"]; !ok {
+		t.Error("expected except-once to be ignored when the prop is explicitly requested")
 	}
 }
 
@@ -1380,6 +1502,7 @@ func TestRenderWithPartialExcept(t *testing.T) {
 	r.Header.Set(HeaderPartialComponent, "test/component")
 	r.Header.Set(HeaderPartialExcept, "secret")
 	r = r.WithContext(i.WithOptionalProp(r.Context(), "extra", func() any { return "opt" }))
+	r = r.WithContext(i.WithScrollProp(r.Context(), "secret", ScrollPageProp{PageName: "page"}))
 	w := httptest.NewRecorder()
 
 	err := i.Render(w, r, "test/component", map[string]any{
@@ -1407,6 +1530,10 @@ func TestRenderWithPartialExcept(t *testing.T) {
 
 	if page.Props["extra"] != "opt" {
 		t.Errorf("expected: opt, got: %v", page.Props["extra"])
+	}
+
+	if _, ok := page.ScrollProps["secret"]; ok {
+		t.Error("expected scrollProps[secret] to be excluded from partial reload")
 	}
 }
 
