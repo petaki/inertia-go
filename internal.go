@@ -14,7 +14,7 @@ func (i *Inertia) isSsrEnabled() bool {
 	return i.ssrURL != "" && i.ssrClient != nil
 }
 
-func (i *Inertia) ssr(ctx context.Context, ssrURL string, ssrClient *http.Client, page *Page) (*Ssr, error) {
+func (i *Inertia) ssr(ctx context.Context, page *Page) (*Ssr, error) {
 	body, err := json.Marshal(page)
 	if err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (i *Inertia) ssr(ctx context.Context, ssrURL string, ssrClient *http.Client
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodPost,
-		ssrURL,
+		i.ssrURL,
 		bytes.NewBuffer(body),
 	)
 	if err != nil {
@@ -32,7 +32,7 @@ func (i *Inertia) ssr(ctx context.Context, ssrURL string, ssrClient *http.Client
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := ssrClient.Do(req)
+	resp, err := i.ssrClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (i *Inertia) createVaryHeader(w http.ResponseWriter) {
 }
 
 func (i *Inertia) createRootTemplate() (*template.Template, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
+	i.tplMu.Lock()
+	defer i.tplMu.Unlock()
 
 	if i.parsedTemplate != nil {
 		return i.parsedTemplate, nil
