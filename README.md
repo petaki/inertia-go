@@ -139,7 +139,7 @@ For more information, please read the official Server-side Rendering documentati
 | Encrypt History | `WithEncryptHistory` | Eager | ✅ | ✅ |
 | Preserve Fragment | `WithPreserveFragment` | Eager | ✅ | ✅ |
 
-- `WithClearHistory`, `WithEncryptHistory`, and `WithPreserveFragment` are emitted only when set to `true`.
+- `WithClearHistory`, `WithEncryptHistory`, and `WithPreserveFragment` are emitted only when `true`.
 
 ## Examples
 
