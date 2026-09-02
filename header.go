@@ -24,4 +24,7 @@ const (
 
 	// HeaderReset header.
 	HeaderReset = "X-Inertia-Reset"
+
+	// HeaderScrollMergeIntent header.
+	HeaderScrollMergeIntent = "X-Inertia-Infinite-Scroll-Merge-Intent"
 )

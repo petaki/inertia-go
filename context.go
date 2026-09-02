@@ -25,7 +25,7 @@ const (
 
 type contextDeferredProp struct {
 	Group string
-	Value func() any
+	Value func() (any, error)
 }
 
 type contextMergeableProp struct {

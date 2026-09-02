@@ -151,7 +151,14 @@ func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) 
 		if rt.isPartial {
 			_, ok = rt.only[key]
 			if len(rt.only) == 0 || ok {
-				page.Props[key] = value.Value()
+				v, err := value.Value()
+				if err != nil {
+					page.RescuedProps = append(page.RescuedProps, key)
+
+					continue
+				}
+
+				page.Props[key] = v
 			}
 		} else {
 			if page.DeferredProps == nil {

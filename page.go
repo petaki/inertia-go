@@ -23,6 +23,7 @@ type Page struct {
 	Version          string                    `json:"version"`
 	SharedProps      []string                  `json:"sharedProps,omitempty"`
 	DeferredProps    map[string][]string       `json:"deferredProps,omitempty"`
+	RescuedProps     []string                  `json:"rescuedProps,omitempty"`
 	MergeProps       []string                  `json:"mergeProps,omitempty"`
 	DeepMergeProps   []string                  `json:"deepMergeProps,omitempty"`
 	PrependProps     []string                  `json:"prependProps,omitempty"`

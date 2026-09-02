@@ -134,6 +134,13 @@ func (i *Inertia) WithAlwaysProp(ctx context.Context, key string, value func() a
 
 // WithDeferredProp function.
 func (i *Inertia) WithDeferredProp(ctx context.Context, key string, value func() any, group ...string) context.Context {
+	return i.WithRescuedDeferredProp(ctx, key, func() (any, error) {
+		return value(), nil
+	}, group...)
+}
+
+// WithRescuedDeferredProp function.
+func (i *Inertia) WithRescuedDeferredProp(ctx context.Context, key string, value func() (any, error), group ...string) context.Context {
 	g := "default"
 	if len(group) > 0 && group[0] != "" {
 		g = group[0]
