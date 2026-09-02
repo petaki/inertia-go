@@ -318,7 +318,7 @@ ctx := inertiaManager.WithScrollProp(r.Context(), "items", inertia.ScrollPagePro
 r = r.WithContext(ctx)
 ```
 
-The client sends the merge direction in the `inertia.HeaderScrollMergeIntent` header, use it to choose between a merge and a prepend prop:
+Use the `inertia.HeaderScrollMergeIntent` header to choose between a merge and a prepend prop:
 
 ```go
 if r.Header.Get(inertia.HeaderScrollMergeIntent) == "prepend" {
