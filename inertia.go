@@ -15,6 +15,7 @@ import (
 // Inertia type.
 type Inertia struct {
 	mu             sync.RWMutex
+	tplMu          sync.Mutex
 	url            string
 	rootTemplate   string
 	version        string
@@ -87,6 +88,9 @@ func (i *Inertia) DisableSsr() {
 func (i *Inertia) ShareFunc(key string, value any) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+
+	i.tplMu.Lock()
+	defer i.tplMu.Unlock()
 
 	i.sharedFuncMap[key] = value
 	i.parsedTemplate = nil
@@ -299,20 +303,9 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return err
 	}
 
-	rootTemplate := i.parsedTemplate
-
-	if rootTemplate == nil {
-		var err error
-
-		rootTemplate, err = func() (*template.Template, error) {
-			i.mu.RUnlock()
-			defer i.mu.RLock()
-
-			return i.createRootTemplate()
-		}()
-		if err != nil {
-			return err
-		}
+	rootTemplate, err := i.createRootTemplate()
+	if err != nil {
+		return err
 	}
 
 	w.Header().Set("Content-Type", "text/html")
@@ -325,14 +318,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 	viewData["page"] = page
 
 	if i.isSsrEnabled() {
-		ssrURL, ssrClient := i.ssrURL, i.ssrClient
-
-		ssr, err := func() (*Ssr, error) {
-			i.mu.RUnlock()
-			defer i.mu.RLock()
-
-			return i.ssr(r.Context(), ssrURL, ssrClient, page)
-		}()
+		ssr, err := i.ssr(r.Context(), page)
 		if err != nil {
 			return err
 		}

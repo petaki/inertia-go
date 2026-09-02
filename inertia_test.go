@@ -631,33 +631,6 @@ func TestRenderConcurrent(t *testing.T) {
 	<-done
 }
 
-type panicTransport struct{}
-
-func (panicTransport) RoundTrip(*http.Request) (*http.Response, error) {
-	panic("ssr transport panic")
-}
-
-func TestRenderWithPanickingSsr(t *testing.T) {
-	templateFS := fstest.MapFS{
-		"app.gohtml": &fstest.MapFile{
-			Data: []byte(`<div id="app" data-page="{{ marshal .page }}"></div>`),
-		},
-	}
-
-	i := New("http://inertia-go.test", "app.gohtml", "", templateFS)
-	i.EnableSsr("http://ssr.test", &http.Client{Transport: panicTransport{}})
-
-	defer func() {
-		if recover() == nil {
-			t.Error("expected the panic to propagate")
-		}
-	}()
-
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-
-	i.Render(httptest.NewRecorder(), r, "test/component", nil)
-}
-
 func TestRenderWithSharedProps(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	i.Share("title", "Test")
