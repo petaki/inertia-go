@@ -795,8 +795,11 @@ func TestRenderWithDeferredPropPartialReload(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderPartialComponent, "test/component")
-	r.Header.Set(HeaderPartialOnly, "comments")
+	r.Header.Set(HeaderPartialOnly, "comments,audit")
 	ctx := i.WithDeferredProp(r.Context(), "comments", func() any { return []string{"a", "b"} })
+	ctx = i.WithRescuedDeferredProp(ctx, "audit", func() (any, error) {
+		return nil, ErrInvalidContextValue
+	})
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
 
@@ -826,6 +829,14 @@ func TestRenderWithDeferredPropPartialReload(t *testing.T) {
 
 	if _, ok := page.Props["title"]; ok {
 		t.Error("expected title to be excluded from partial reload")
+	}
+
+	if _, ok := page.Props["audit"]; ok {
+		t.Error("expected rescued prop to be omitted from props")
+	}
+
+	if len(page.RescuedProps) != 1 || page.RescuedProps[0] != "audit" {
+		t.Errorf("expected rescuedProps [audit], got: %v", page.RescuedProps)
 	}
 }
 
