@@ -114,7 +114,7 @@ For more information, please read the official Server-side Rendering documentati
 | Base | `Share`, `WithProp`, `Render` | Eager | ✅ | ✅ if requested |
 | Optional | `WithOptionalProp` | Lazy | ❌ | ✅ if requested |
 | Always | `WithAlwaysProp` | Lazy | ✅ | ✅ always |
-| Deferred | `WithDeferredProp`, `WithRescuedDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
+| Deferred | `WithDeferredProp` | Lazy | ❌ deferred | ✅ if requested |
 | Merge | `WithMergeProp` | Lazy | ✅ | ✅ if requested |
 | Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
 | Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
