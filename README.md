@@ -103,6 +103,8 @@ inertiaManager.EnableSsr("http://ssr-host:13714/render", client)
 inertiaManager.EnableSsrWithDefault(client)
 ```
 
+`Render` returns an error if the SSR server fails, it does not fall back to client-side rendering.
+
 For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
 
 ## Page Props
