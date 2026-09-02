@@ -124,7 +124,7 @@ For more information, please read the official Server-side Rendering documentati
 - `WithOnceProp` and `WithOnce` props are excluded by the `X-Inertia-Except-Once-Props` header.
 - Except-once is ignored when a partial reload explicitly requests the prop.
 - `WithRescuedDeferredProp` omits the prop and adds its key to `rescuedProps` on error.
-- `WithScrollProp` adds scroll metadata to the page response for infinite scroll support.
+- `WithScrollProp` adds scroll metadata, pair it with a merge or prepend prop.
 - `WithErrorProp` errors are merged with any inline `errors` map passed to `Render`.
 
 ## Page Settings
@@ -318,7 +318,7 @@ ctx := inertiaManager.WithScrollProp(r.Context(), "items", inertia.ScrollPagePro
 r = r.WithContext(ctx)
 ```
 
-Use the `inertia.HeaderScrollMergeIntent` header to choose between a merge and a prepend prop:
+A scroll prop does not merge on its own, pair it with a merge or prepend prop:
 
 ```go
 if r.Header.Get(inertia.HeaderScrollMergeIntent) == "prepend" {
