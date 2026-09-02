@@ -118,15 +118,16 @@ For more information, please read the official Server-side Rendering documentati
 | Merge | `WithMergeProp` | Lazy | ✅ | ✅ if requested |
 | Deep Merge | `WithDeepMergeProp` | Lazy | ✅ | ✅ if requested |
 | Prepend | `WithPrependProp` | Lazy | ✅ | ✅ if requested |
-| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ metadata if requested |
+| Scroll | `WithScrollProp` | — | ✅ metadata | ✅ if requested |
 | Once | `WithOnceProp`, `WithOnce` | Lazy | ✅ | ✅ if requested |
 | Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
 
+- `WithRescuedDeferredProp` omits the prop and adds its key to `rescuedProps` on error.
+- `WithScrollProp` adds scroll metadata, pair it with a merge or prepend prop.
 - `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
 - `WithOnceProp` and `WithOnce` props are excluded by the `X-Inertia-Except-Once-Props` header.
 - `X-Inertia-Except-Once-Props` header is ignored when the prop is explicitly requested.
-- `WithRescuedDeferredProp` omits the prop and adds its key to `rescuedProps` on error.
-- `WithScrollProp` adds scroll metadata, pair it with a merge or prepend prop.
+- `X-Inertia-Partial-Data` and `X-Inertia-Partial-Except` match prop keys exactly, no dot notation.
 - `WithErrorProp` errors are merged with any inline `errors` map passed to `Render`.
 
 ## Page Settings
