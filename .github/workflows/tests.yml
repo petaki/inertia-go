@@ -23,5 +23,5 @@ jobs:
 
       - name: Staticcheck
         run: |
-          go install honnef.co/go/tools/cmd/staticcheck@2026.2
+          go install honnef.co/go/tools/cmd/staticcheck@2026.2.2
           $(go env GOPATH)/bin/staticcheck ./...
