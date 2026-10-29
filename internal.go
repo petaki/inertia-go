@@ -231,8 +231,13 @@ func (i *Inertia) createOnceProps(r *http.Request, rt *runtime, page *Page) erro
 	return i.createMainProps(r, rt, page, contextKeyOnceProps)
 }
 
-func (i *Inertia) createErrorProps(r *http.Request, _ *runtime, page *Page) error {
-	if page.Props["errors"] != nil {
+func (i *Inertia) createErrorProps(r *http.Request, rt *runtime, page *Page) error {
+	inlineErrors, ok := rt.props["errors"]
+	if ok {
+		if inlineErrors == nil {
+			page.Props["errors"] = make(map[string]any)
+		}
+
 		return nil
 	}
 
@@ -241,11 +246,11 @@ func (i *Inertia) createErrorProps(r *http.Request, _ *runtime, page *Page) erro
 		return err
 	}
 
-	if contextErrors == nil {
-		contextErrors = make(map[string]any)
+	if contextErrors != nil {
+		page.Props["errors"] = contextErrors
+	} else if page.Props["errors"] == nil {
+		page.Props["errors"] = make(map[string]any)
 	}
-
-	page.Props["errors"] = contextErrors
 
 	return nil
 }

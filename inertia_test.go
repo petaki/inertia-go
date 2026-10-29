@@ -1508,6 +1508,75 @@ func TestRenderWithErrorPropsPrecedence(t *testing.T) {
 	}
 }
 
+func TestRenderWithSharedErrorProps(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	i.Share("errors", map[string]any{"shared": "Shared error"})
+
+	for _, withErrorProp := range []bool{false, true} {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.Header.Set(HeaderInertia, "true")
+
+		if withErrorProp {
+			r = r.WithContext(i.WithErrorProp(r.Context(), "email", "Invalid email"))
+		}
+
+		w := httptest.NewRecorder()
+
+		err := i.Render(w, r, "test/component", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var page Page
+
+		err = json.NewDecoder(w.Result().Body).Decode(&page)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		errors, ok := page.Props["errors"].(map[string]any)
+		if !ok {
+			t.Fatal("expected: errors map in props, got: empty value")
+		}
+
+		expected := map[string]any{"shared": "Shared error"}
+		if withErrorProp {
+			expected = map[string]any{"email": "Invalid email"}
+		}
+
+		if len(errors) != len(expected) || errors["shared"] != expected["shared"] || errors["email"] != expected["email"] {
+			t.Errorf("expected: %v, got: %v", expected, errors)
+		}
+	}
+}
+
+func TestRenderWithNilErrorProps(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	i.Share("errors", map[string]any{"shared": "Shared error"})
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r = r.WithContext(i.WithErrorProp(r.Context(), "email", "Invalid email"))
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{"errors": nil})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	errors, ok := page.Props["errors"].(map[string]any)
+	if !ok || len(errors) != 0 {
+		t.Errorf("expected: empty errors map, got: %v", page.Props["errors"])
+	}
+}
+
 func TestRenderWithTypedErrorProps(t *testing.T) {
 	type bag map[string][]string
 
