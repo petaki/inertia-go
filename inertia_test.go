@@ -3,9 +3,11 @@ package inertia
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -599,6 +601,43 @@ func TestRender(t *testing.T) {
 	}
 }
 
+func TestRenderWithSsr(t *testing.T) {
+	status := http.StatusOK
+	ssrServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		io.WriteString(w, `{"head":["<title>Test</title>"],"body":"<div id=\"app\"></div>"}`)
+	}))
+	defer ssrServer.Close()
+
+	templateFS := fstest.MapFS{
+		"app.gohtml": &fstest.MapFile{
+			Data: []byte(`{{ raw .ssr.Head }}{{ raw .ssr.Body }}`),
+		},
+	}
+
+	i := New("http://inertia-go.test", "app.gohtml", "", templateFS)
+	i.EnableSsr(ssrServer.URL)
+
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, httptest.NewRequest(http.MethodGet, "/", nil), "test/component", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := `<title>Test</title><div id="app"></div>`
+	if w.Body.String() != expected {
+		t.Errorf("expected: %s, got: %s", expected, w.Body.String())
+	}
+
+	status = http.StatusBadGateway
+
+	err = i.Render(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil), "test/component", nil)
+	if !errors.Is(err, ErrBadSsrStatusCode) {
+		t.Errorf("expected: %v, got: %v", ErrBadSsrStatusCode, err)
+	}
+}
+
 func TestRenderConcurrent(t *testing.T) {
 	templateFS := fstest.MapFS{
 		"app.gohtml": &fstest.MapFile{
@@ -1116,6 +1155,10 @@ func TestRenderWithScrollProp(t *testing.T) {
 		t.Errorf("expected nextPage: 2, got: %v", scroll.NextPage)
 	}
 
+	if !strings.Contains(w.Body.String(), `"previousPage":null`) {
+		t.Errorf("expected previousPage: null, got: %s", w.Body.String())
+	}
+
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderPartialComponent, "test/component")
@@ -1304,7 +1347,12 @@ func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
 	r.Header.Set(HeaderExceptOnceProps, "activity")
-	ctx := i.WithMergeProp(r.Context(), "activity", func() any { return []string{"a"} })
+	calls := 0
+	ctx := i.WithMergeProp(r.Context(), "activity", func() any {
+		calls++
+
+		return []string{"a"}
+	}, "id")
 	ctx = i.WithOnce(ctx, "activity")
 	r = r.WithContext(ctx)
 	w := httptest.NewRecorder()
@@ -1323,6 +1371,14 @@ func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
 
 	if _, ok := page.Props["activity"]; ok {
 		t.Error("expected activity prop to be excluded when in except-once")
+	}
+
+	if calls != 0 {
+		t.Errorf("expected activity not to be evaluated, got: %d calls", calls)
+	}
+
+	if len(page.MergeProps) != 0 || len(page.MatchPropsOn) != 0 {
+		t.Errorf("expected no merge metadata, got: %v, %v", page.MergeProps, page.MatchPropsOn)
 	}
 
 	if prop, ok := page.OnceProps["activity"]; !ok || prop.Prop != "activity" {
@@ -1355,7 +1411,67 @@ func TestRenderWithOnceModifierExceptOnce(t *testing.T) {
 	}
 }
 
+func TestRenderWithDeferredOnceModifierExceptOnce(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderExceptOnceProps, "permissions")
+	ctx := i.WithDeferredProp(r.Context(), "permissions", func() any { return []string{"p"} })
+	r = r.WithContext(i.WithOnce(ctx, "permissions"))
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(page.DeferredProps) != 0 {
+		t.Errorf("expected no deferred props, got: %v", page.DeferredProps)
+	}
+
+	if _, ok := page.OnceProps["permissions"]; !ok {
+		t.Errorf("expected onceProps metadata to remain, got: %v", page.OnceProps)
+	}
+}
+
 func TestRenderWithErrorProps(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	ctx := i.WithErrorProp(r.Context(), "password", "Too short")
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	errors, ok := page.Props["errors"].(map[string]any)
+	if !ok {
+		t.Fatal("expected: errors map in props, got: empty value")
+	}
+
+	if errors["password"] != "Too short" {
+		t.Errorf("expected: Too short, got: %v", errors["password"])
+	}
+}
+
+func TestRenderWithErrorPropsPrecedence(t *testing.T) {
 	i := New("http://inertia-go.test", "", "")
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderInertia, "true")
@@ -1379,15 +1495,83 @@ func TestRenderWithErrorProps(t *testing.T) {
 
 	errors, ok := page.Props["errors"].(map[string]any)
 	if !ok {
-		t.Error("expected: errors map in props, got: empty value")
+		t.Fatal("expected: errors map in props, got: empty value")
 	}
 
 	if errors["email"] != "Invalid" {
 		t.Errorf("expected: Invalid, got: %v", errors["email"])
 	}
 
-	if errors["password"] != "Too short" {
-		t.Errorf("expected: Too short, got: %v", errors["password"])
+	_, ok = errors["password"]
+	if ok {
+		t.Error("expected: handler errors only, got: password")
+	}
+}
+
+func TestRenderWithTypedErrorProps(t *testing.T) {
+	type bag map[string][]string
+
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"errors": bag{"email": {"Invalid"}},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	errors, ok := page.Props["errors"].(map[string]any)
+	if !ok {
+		t.Fatal("expected: errors map in props, got: empty value")
+	}
+
+	email, ok := errors["email"].([]any)
+	if !ok || len(email) != 1 || email[0] != "Invalid" {
+		t.Errorf("expected: [Invalid], got: %v", errors["email"])
+	}
+}
+
+func TestRenderWithErrorPropsPartialReload(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+	r.Header.Set(HeaderPartialComponent, "test/component")
+	r.Header.Set(HeaderPartialOnly, "user")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", map[string]any{
+		"user":   "test-user",
+		"errors": map[string][]string{"email": {"Invalid"}},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	errors, ok := page.Props["errors"].(map[string]any)
+	if !ok {
+		t.Fatal("expected: errors map in props, got: empty value")
+	}
+
+	_, ok = errors["email"]
+	if !ok {
+		t.Errorf("expected: email error on partial reload, got: %v", errors)
 	}
 }
 

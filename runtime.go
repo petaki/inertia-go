@@ -1,57 +1,27 @@
 package inertia
 
-import (
-	"net/http"
-	"strings"
-)
+import "net/http"
 
 type runtime struct {
-	isPartial  bool
-	props      map[string]any
-	only       map[string]struct{}
-	except     map[string]struct{}
-	exceptOnce map[string]struct{}
-	reset      map[string]struct{}
+	isPartial      bool
+	isSsrEnabled   bool
+	version        string
+	ssrURL         string
+	ssrClient      *http.Client
+	props          map[string]any
+	sharedProps    map[string]any
+	sharedViewData map[string]any
+	only           map[string]struct{}
+	except         map[string]struct{}
+	exceptOnce     map[string]struct{}
+	once           map[string]struct{}
+	reset          map[string]struct{}
 }
 
-func newRuntime(r *http.Request, component string, props map[string]any) *runtime {
-	rt := &runtime{
-		props:      props,
-		only:       make(map[string]struct{}),
-		except:     make(map[string]struct{}),
-		exceptOnce: make(map[string]struct{}),
-		reset:      make(map[string]struct{}),
-	}
+func (rt *runtime) isCachedOnce(key string) bool {
+	_, isOnce := rt.once[key]
+	_, isCached := rt.exceptOnce[key]
+	_, isRequested := rt.only[key]
 
-	if r.Header.Get(HeaderPartialComponent) == component {
-		if partial := r.Header.Get(HeaderPartialOnly); partial != "" {
-			rt.isPartial = true
-
-			for value := range strings.SplitSeq(partial, ",") {
-				rt.only[value] = struct{}{}
-			}
-		}
-
-		if partialExcept := r.Header.Get(HeaderPartialExcept); partialExcept != "" {
-			rt.isPartial = true
-
-			for value := range strings.SplitSeq(partialExcept, ",") {
-				rt.except[value] = struct{}{}
-			}
-		}
-	}
-
-	if exceptOnceHeader := r.Header.Get(HeaderExceptOnceProps); exceptOnceHeader != "" {
-		for value := range strings.SplitSeq(exceptOnceHeader, ",") {
-			rt.exceptOnce[value] = struct{}{}
-		}
-	}
-
-	if resetHeader := r.Header.Get(HeaderReset); resetHeader != "" {
-		for value := range strings.SplitSeq(resetHeader, ",") {
-			rt.reset[value] = struct{}{}
-		}
-	}
-
-	return rt
+	return isOnce && isCached && !isRequested
 }

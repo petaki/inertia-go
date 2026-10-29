@@ -10,7 +10,7 @@ func TestNewRuntime(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	props := map[string]any{"title": "Test"}
 
-	rt := newRuntime(r, "test/component", props)
+	rt := New("", "", "").createRuntime(r, "test/component", props)
 
 	if rt.isPartial {
 		t.Error("expected isPartial to be false")
@@ -42,7 +42,7 @@ func TestNewRuntimeWithPartialOnly(t *testing.T) {
 	r.Header.Set(HeaderPartialComponent, "test/component")
 	r.Header.Set(HeaderPartialOnly, "title,user")
 
-	rt := newRuntime(r, "test/component", nil)
+	rt := New("", "", "").createRuntime(r, "test/component", nil)
 
 	if !rt.isPartial {
 		t.Error("expected isPartial to be true")
@@ -68,7 +68,7 @@ func TestNewRuntimeWithPartialExcept(t *testing.T) {
 	r.Header.Set(HeaderPartialComponent, "test/component")
 	r.Header.Set(HeaderPartialExcept, "secret")
 
-	rt := newRuntime(r, "test/component", nil)
+	rt := New("", "", "").createRuntime(r, "test/component", nil)
 
 	if !rt.isPartial {
 		t.Error("expected isPartial to be true")
@@ -88,7 +88,7 @@ func TestNewRuntimeWithExceptOnce(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderExceptOnceProps, "plans,flags")
 
-	rt := newRuntime(r, "test/component", nil)
+	rt := New("", "", "").createRuntime(r, "test/component", nil)
 
 	if rt.isPartial {
 		t.Error("expected isPartial to be false")
@@ -113,7 +113,7 @@ func TestNewRuntimeWithReset(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set(HeaderReset, "results,items")
 
-	rt := newRuntime(r, "test/component", nil)
+	rt := New("", "", "").createRuntime(r, "test/component", nil)
 
 	if rt.isPartial {
 		t.Error("expected isPartial to be false")
@@ -139,7 +139,7 @@ func TestNewRuntimeWithDifferentComponent(t *testing.T) {
 	r.Header.Set(HeaderPartialComponent, "other/component")
 	r.Header.Set(HeaderPartialOnly, "title")
 
-	rt := newRuntime(r, "test/component", nil)
+	rt := New("", "", "").createRuntime(r, "test/component", nil)
 
 	if rt.isPartial {
 		t.Error("expected isPartial to be false when component does not match")
