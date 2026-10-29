@@ -130,7 +130,7 @@ For more information, please read the official Server-side Rendering documentati
 - `WithOnceProp` and `WithOnce` props are excluded by the `X-Inertia-Except-Once-Props` header.
 - `X-Inertia-Except-Once-Props` header is ignored when the prop is explicitly requested.
 - `X-Inertia-Partial-Data` and `X-Inertia-Partial-Except` match prop keys exactly, no dot notation.
-- `WithErrorProp` errors are replaced by any inline `errors` prop passed to `Render`.
+- `WithErrorProp` errors replace a shared `errors` prop, an inline `errors` prop replaces both.
 
 ## Page Settings
 
