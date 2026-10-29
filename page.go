@@ -10,8 +10,8 @@ type OncePageProp struct {
 type ScrollPageProp struct {
 	PageName     string `json:"pageName"`
 	CurrentPage  any    `json:"currentPage"`
-	PreviousPage any    `json:"previousPage,omitempty"`
-	NextPage     any    `json:"nextPage,omitempty"`
+	PreviousPage any    `json:"previousPage"`
+	NextPage     any    `json:"nextPage"`
 	Reset        bool   `json:"reset"`
 }
 

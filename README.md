@@ -37,6 +37,8 @@ var templateFS embed.FS
 
 // ...
 
+rootTemplate := "template/app.gohtml" // Path inside the embedded FS, without "./"
+
 inertiaManager := inertia.New(url, rootTemplate, version, templateFS)
 ```
 
@@ -44,7 +46,7 @@ inertiaManager := inertia.New(url, rootTemplate, version, templateFS)
 
 ```go
 mux := http.NewServeMux()
-mux.Handle("/", inertiaManager.Middleware(homeHandler))
+mux.Handle("/", inertiaManager.Middleware(http.HandlerFunc(homeHandler)))
 ```
 
 ### 3. Render in handlers
@@ -128,7 +130,7 @@ For more information, please read the official Server-side Rendering documentati
 - `WithOnceProp` and `WithOnce` props are excluded by the `X-Inertia-Except-Once-Props` header.
 - `X-Inertia-Except-Once-Props` header is ignored when the prop is explicitly requested.
 - `X-Inertia-Partial-Data` and `X-Inertia-Partial-Except` match prop keys exactly, no dot notation.
-- `WithErrorProp` errors are merged with any inline `errors` map passed to `Render`.
+- `WithErrorProp` errors are replaced by any inline `errors` prop passed to `Render`.
 
 ## Page Settings
 
@@ -237,7 +239,7 @@ r = r.WithContext(ctx)
 
 ```go
 ctx := inertiaManager.WithRescuedDeferredProp(r.Context(), "comments", func() (any, error) {
-    comments, err := getComments()
+    comments, err := findComments()
     if err != nil {
         return nil, err
     }
@@ -265,15 +267,6 @@ ctx := inertiaManager.WithMergeProp(r.Context(), "results", func() any {
 r = r.WithContext(ctx)
 ```
 
-Or with multiple nested match on paths:
-
-```go
-ctx := inertiaManager.WithMergeProp(r.Context(), "complexData", func() any {
-    return getComplexData()
-}, "users.data.id", "messages.uuid")
-r = r.WithContext(ctx)
-```
-
 ### Deep merge prop (context based)
 
 ```go
@@ -289,6 +282,15 @@ Or with match on:
 ctx := inertiaManager.WithDeepMergeProp(r.Context(), "settings", func() any {
     return getSettings()
 }, "id")
+r = r.WithContext(ctx)
+```
+
+Or with multiple nested match on paths:
+
+```go
+ctx := inertiaManager.WithDeepMergeProp(r.Context(), "complexData", func() any {
+    return getComplexData()
+}, "users.data.id", "messages.uuid")
 r = r.WithContext(ctx)
 ```
 
@@ -329,6 +331,7 @@ if r.Header.Get(inertia.HeaderScrollMergeIntent) == "prepend" {
 } else {
     ctx = inertiaManager.WithMergeProp(ctx, "items", getItems)
 }
+r = r.WithContext(ctx)
 ```
 
 ### Once prop (context based)

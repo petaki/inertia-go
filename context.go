@@ -1,6 +1,9 @@
 package inertia
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type contextKey string
 
@@ -45,7 +48,7 @@ func contextGet[T any](ctx context.Context, key contextKey) (T, error) {
 	if !ok {
 		var zero T
 
-		return zero, ErrInvalidContextValue
+		return zero, fmt.Errorf("%w: %s", ErrInvalidContextValue, key)
 	}
 
 	return value, nil

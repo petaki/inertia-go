@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"io/fs"
-	"maps"
 	"net/http"
-	"slices"
 	"sync"
 	"time"
 )
@@ -239,19 +237,17 @@ func (i *Inertia) Middleware(next http.Handler) http.Handler {
 
 // Render function.
 func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component string, props map[string]any) error {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-
-	rt := newRuntime(r, component, props)
+	rt := i.createRuntime(r, component, props)
 
 	page := &Page{
 		Component: component,
 		Props:     make(map[string]any),
 		URL:       r.RequestURI,
-		Version:   i.version,
+		Version:   rt.version,
 	}
 
 	for _, create := range []func(*http.Request, *runtime, *Page) error{
+		i.createOnceMetadata,
 		i.createBaseProps,
 		i.createOptionalProps,
 		i.createAlwaysProps,
@@ -261,37 +257,14 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		i.createPrependProps,
 		i.createScrollProps,
 		i.createOnceProps,
-		i.createOnceModifiers,
 		i.createErrorProps,
+		i.createSharedProps,
+		i.createPageSettings,
 	} {
 		err := create(r, rt, page)
 		if err != nil {
 			return err
 		}
-	}
-
-	if len(i.sharedProps) > 0 {
-		page.SharedProps = slices.Sorted(maps.Keys(i.sharedProps))
-	}
-
-	flash, ok := r.Context().Value(contextKeyFlash).(map[string]any)
-	if ok {
-		page.Flash = flash
-	}
-
-	clearHistory, ok := r.Context().Value(contextKeyClearHistory).(bool)
-	if ok {
-		page.ClearHistory = clearHistory
-	}
-
-	encryptHistory, ok := r.Context().Value(contextKeyEncryptHistory).(bool)
-	if ok {
-		page.EncryptHistory = encryptHistory
-	}
-
-	preserveFragment, ok := r.Context().Value(contextKeyPreserveFragment).(bool)
-	if ok {
-		page.PreserveFragment = preserveFragment
 	}
 
 	i.createVaryHeader(w)
@@ -317,15 +290,15 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 
 	w.Header().Set("Content-Type", "text/html")
 
-	viewData, err := i.createViewData(r)
+	viewData, err := i.createViewData(r, rt)
 	if err != nil {
 		return err
 	}
 
 	viewData["page"] = page
 
-	if i.isSsrEnabled() {
-		ssr, err := i.ssr(r.Context(), page)
+	if rt.isSsrEnabled {
+		ssr, err := i.ssr(r.Context(), rt, page)
 		if err != nil {
 			return err
 		}
