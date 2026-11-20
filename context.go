@@ -3,6 +3,7 @@ package inertia
 import (
 	"context"
 	"fmt"
+	"maps"
 )
 
 type contextKey string
@@ -55,18 +56,14 @@ func contextGet[T any](ctx context.Context, key contextKey) (T, error) {
 }
 
 func contextSet[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
-	v := ctx.Value(key)
+	props, _ := ctx.Value(key).(map[string]T)
 
-	if v != nil {
-		props, ok := v.(map[string]T)
-		if ok {
-			props[propKey] = value
-
-			return context.WithValue(ctx, key, props)
-		}
+	props = maps.Clone(props)
+	if props == nil {
+		props = make(map[string]T)
 	}
 
-	return context.WithValue(ctx, key, map[string]T{
-		propKey: value,
-	})
+	props[propKey] = value
+
+	return context.WithValue(ctx, key, props)
 }

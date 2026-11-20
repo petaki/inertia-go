@@ -372,6 +372,36 @@ func TestWithProp(t *testing.T) {
 	}
 }
 
+func TestWithPropDoesNotMutateParent(t *testing.T) {
+	i := New("", "", "")
+	parent := i.WithProp(context.TODO(), "user", "test-user")
+	_ = i.WithProp(parent, "secret", "child-only")
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil).WithContext(parent)
+	r.Header.Set(HeaderInertia, "true")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "Home", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var page Page
+
+	err = json.Unmarshal(w.Body.Bytes(), &page)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := page.Props["secret"]; ok {
+		t.Errorf("expected: no secret prop in parent context, got: %v", page.Props)
+	}
+
+	if page.Props["user"] != "test-user" {
+		t.Errorf("expected: test-user, got: %v", page.Props["user"])
+	}
+}
+
 func TestWithErrorProp(t *testing.T) {
 	ctx := context.TODO()
 
