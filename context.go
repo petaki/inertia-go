@@ -3,7 +3,6 @@ package inertia
 import (
 	"context"
 	"fmt"
-	"maps"
 )
 
 type contextKey string
@@ -37,33 +36,44 @@ type contextMergeableProp struct {
 	Value   func() any
 }
 
-func contextGet[T any](ctx context.Context, key contextKey) (T, error) {
+type contextNode[T any] struct {
+	key    string
+	value  T
+	parent *contextNode[T]
+}
+
+func (n *contextNode[T]) values() map[string]T {
+	values := make(map[string]T)
+
+	for node := n; node != nil; node = node.parent {
+		if _, ok := values[node.key]; !ok {
+			values[node.key] = node.value
+		}
+	}
+
+	return values
+}
+
+func contextGet[T any](ctx context.Context, key contextKey) (map[string]T, error) {
 	v := ctx.Value(key)
 	if v == nil {
-		var zero T
-
-		return zero, nil
+		return nil, nil
 	}
 
-	value, ok := v.(T)
+	node, ok := v.(*contextNode[T])
 	if !ok {
-		var zero T
-
-		return zero, fmt.Errorf("%w: %s", ErrInvalidContextValue, key)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidContextValue, key)
 	}
 
-	return value, nil
+	return node.values(), nil
 }
 
 func contextSet[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
-	props, _ := ctx.Value(key).(map[string]T)
+	parent, _ := ctx.Value(key).(*contextNode[T])
 
-	props = maps.Clone(props)
-	if props == nil {
-		props = make(map[string]T)
-	}
-
-	props[propKey] = value
-
-	return context.WithValue(ctx, key, props)
+	return context.WithValue(ctx, key, &contextNode[T]{
+		key:    propKey,
+		value:  value,
+		parent: parent,
+	})
 }

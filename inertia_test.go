@@ -278,8 +278,8 @@ func TestWithViewData(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithViewData(ctx, "meta", "test-meta")
 
-	contextViewData, ok := ctx.Value(contextKeyViewData).(map[string]any)
-	if !ok {
+	contextViewData, err := contextGet[any](ctx, contextKeyViewData)
+	if err != nil || contextViewData == nil {
 		t.Error("expected: context view data, got: empty value")
 	}
 
@@ -357,8 +357,8 @@ func TestWithProp(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithProp(ctx, "user", "test-user")
 
-	contextProps, ok := ctx.Value(contextKeyProps).(map[string]any)
-	if !ok {
+	contextProps, err := contextGet[any](ctx, contextKeyProps)
+	if err != nil || contextProps == nil {
 		t.Error("expected: context props, got: empty value")
 	}
 
@@ -408,8 +408,8 @@ func TestWithErrorProp(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithErrorProp(ctx, "email", "Invalid email")
 
-	contextErrors, ok := ctx.Value(contextKeyErrors).(map[string]any)
-	if !ok {
+	contextErrors, err := contextGet[any](ctx, contextKeyErrors)
+	if err != nil || contextErrors == nil {
 		t.Error("expected: context errors, got: empty value")
 	}
 
