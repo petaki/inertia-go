@@ -617,8 +617,8 @@ func TestRender(t *testing.T) {
 
 	resp = w.Result()
 
-	if resp.Header.Get("Content-Type") != "text/html" {
-		t.Errorf("expected: text/html, got: %s", resp.Header.Get("Content-Type"))
+	if resp.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Errorf("expected: text/html; charset=utf-8, got: %s", resp.Header.Get("Content-Type"))
 	}
 
 	varyValues = resp.Header.Values("Vary")
