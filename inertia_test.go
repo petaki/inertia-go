@@ -278,8 +278,8 @@ func TestWithViewData(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithViewData(ctx, "meta", "test-meta")
 
-	contextViewData, ok := ctx.Value(contextKeyViewData).(map[string]any)
-	if !ok {
+	contextViewData, err := contextGet[any](ctx, contextKeyViewData)
+	if err != nil || contextViewData == nil {
 		t.Error("expected: context view data, got: empty value")
 	}
 
@@ -357,8 +357,8 @@ func TestWithProp(t *testing.T) {
 	i := New("", "", "")
 	ctx = i.WithProp(ctx, "user", "test-user")
 
-	contextProps, ok := ctx.Value(contextKeyProps).(map[string]any)
-	if !ok {
+	contextProps, err := contextGet[any](ctx, contextKeyProps)
+	if err != nil || contextProps == nil {
 		t.Error("expected: context props, got: empty value")
 	}
 
@@ -372,14 +372,44 @@ func TestWithProp(t *testing.T) {
 	}
 }
 
+func TestWithPropDoesNotMutateParent(t *testing.T) {
+	i := New("", "", "")
+	parent := i.WithProp(context.TODO(), "user", "test-user")
+	_ = i.WithProp(parent, "secret", "child-only")
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil).WithContext(parent)
+	r.Header.Set(HeaderInertia, "true")
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "Home", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var page Page
+
+	err = json.Unmarshal(w.Body.Bytes(), &page)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := page.Props["secret"]; ok {
+		t.Errorf("expected: no secret prop in parent context, got: %v", page.Props)
+	}
+
+	if page.Props["user"] != "test-user" {
+		t.Errorf("expected: test-user, got: %v", page.Props["user"])
+	}
+}
+
 func TestWithErrorProp(t *testing.T) {
 	ctx := context.TODO()
 
 	i := New("", "", "")
 	ctx = i.WithErrorProp(ctx, "email", "Invalid email")
 
-	contextErrors, ok := ctx.Value(contextKeyErrors).(map[string]any)
-	if !ok {
+	contextErrors, err := contextGet[any](ctx, contextKeyErrors)
+	if err != nil || contextErrors == nil {
 		t.Error("expected: context errors, got: empty value")
 	}
 
@@ -587,8 +617,8 @@ func TestRender(t *testing.T) {
 
 	resp = w.Result()
 
-	if resp.Header.Get("Content-Type") != "text/html" {
-		t.Errorf("expected: text/html, got: %s", resp.Header.Get("Content-Type"))
+	if resp.Header.Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Errorf("expected: text/html; charset=utf-8, got: %s", resp.Header.Get("Content-Type"))
 	}
 
 	varyValues = resp.Header.Values("Vary")
@@ -1833,5 +1863,89 @@ func TestLocation(t *testing.T) {
 
 	if len(body) != 0 {
 		t.Errorf("expected empty body, got: %s", body)
+	}
+}
+
+func TestMiddlewareWithRedirect(t *testing.T) {
+	i := New("", "", "")
+
+	m := i.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/users", http.StatusFound)
+	}))
+
+	for _, tc := range []struct {
+		method   string
+		inertia  bool
+		expected int
+	}{
+		{http.MethodPut, true, http.StatusSeeOther},
+		{http.MethodPatch, true, http.StatusSeeOther},
+		{http.MethodDelete, true, http.StatusSeeOther},
+		{http.MethodPost, true, http.StatusFound},
+		{http.MethodPut, false, http.StatusFound},
+	} {
+		r := httptest.NewRequest(tc.method, "/", nil)
+		if tc.inertia {
+			r.Header.Set(HeaderInertia, "true")
+		}
+
+		w := httptest.NewRecorder()
+
+		m.ServeHTTP(w, r)
+
+		if w.Code != tc.expected {
+			t.Errorf("%s (inertia: %t): expected status code: %d, got: %d", tc.method, tc.inertia, tc.expected, w.Code)
+		}
+
+		if loc := w.Header().Get("Location"); loc != "/users" {
+			t.Errorf("%s (inertia: %t): expected: /users, got: %s", tc.method, tc.inertia, loc)
+		}
+	}
+}
+
+func TestRenderWithSortedPropKeys(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+
+	keys := []string{"e", "c", "a", "d", "b"}
+	ctx := r.Context()
+
+	for _, key := range keys {
+		ctx = i.WithMergeProp(ctx, key, func() any { return []int{1} }, "id")
+		ctx = i.WithDeferredProp(ctx, "deferred_"+key, func() any { return key })
+	}
+
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expected := "a,b,c,d,e"
+
+	if got := strings.Join(page.MergeProps, ","); got != expected {
+		t.Errorf("expected mergeProps %s, got: %s", expected, got)
+	}
+
+	expected = "a.id,b.id,c.id,d.id,e.id"
+
+	if got := strings.Join(page.MatchPropsOn, ","); got != expected {
+		t.Errorf("expected matchPropsOn %s, got: %s", expected, got)
+	}
+
+	expected = "deferred_a,deferred_b,deferred_c,deferred_d,deferred_e"
+
+	if got := strings.Join(page.DeferredProps["default"], ","); got != expected {
+		t.Errorf("expected deferredProps %s, got: %s", expected, got)
 	}
 }

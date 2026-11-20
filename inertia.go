@@ -231,6 +231,11 @@ func (i *Inertia) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
+		switch r.Method {
+		case http.MethodPut, http.MethodPatch, http.MethodDelete:
+			w = &responseWriter{ResponseWriter: w}
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }
@@ -288,7 +293,7 @@ func (i *Inertia) Render(w http.ResponseWriter, r *http.Request, component strin
 		return err
 	}
 
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	viewData, err := i.createViewData(r, rt)
 	if err != nil {

@@ -66,12 +66,12 @@ func (i *Inertia) createRuntime(r *http.Request, component string, props map[str
 }
 
 func (i *Inertia) createOnceMetadata(r *http.Request, rt *runtime, page *Page) error {
-	onceProps, err := contextGet[map[string]func() any](r.Context(), contextKeyOnceProps)
+	onceProps, err := contextGet[func() any](r.Context(), contextKeyOnceProps)
 	if err != nil {
 		return err
 	}
 
-	onceModifiers, err := contextGet[map[string]OncePageProp](r.Context(), contextKeyOnce)
+	onceModifiers, err := contextGet[OncePageProp](r.Context(), contextKeyOnce)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (i *Inertia) createOnceMetadata(r *http.Request, rt *runtime, page *Page) e
 }
 
 func (i *Inertia) createBaseProps(r *http.Request, rt *runtime, page *Page) error {
-	contextProps, err := contextGet[map[string]any](r.Context(), contextKeyProps)
+	contextProps, err := contextGet[any](r.Context(), contextKeyProps)
 	if err != nil {
 		return err
 	}
@@ -150,12 +150,14 @@ func (i *Inertia) createAlwaysProps(r *http.Request, rt *runtime, page *Page) er
 }
 
 func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) error {
-	deferredProps, err := contextGet[map[string]contextDeferredProp](r.Context(), contextKeyDeferredProps)
+	deferredProps, err := contextGet[contextDeferredProp](r.Context(), contextKeyDeferredProps)
 	if err != nil {
 		return err
 	}
 
-	for key, value := range deferredProps {
+	for _, key := range slices.Sorted(maps.Keys(deferredProps)) {
+		value := deferredProps[key]
+
 		_, ok := rt.except[key]
 		if ok || rt.isCachedOnce(key) {
 			continue
@@ -198,7 +200,7 @@ func (i *Inertia) createPrependProps(r *http.Request, rt *runtime, page *Page) e
 }
 
 func (i *Inertia) createScrollProps(r *http.Request, rt *runtime, page *Page) error {
-	scrollProps, err := contextGet[map[string]ScrollPageProp](r.Context(), contextKeyScrollProp)
+	scrollProps, err := contextGet[ScrollPageProp](r.Context(), contextKeyScrollProp)
 	if err != nil {
 		return err
 	}
@@ -241,7 +243,7 @@ func (i *Inertia) createErrorProps(r *http.Request, rt *runtime, page *Page) err
 		return nil
 	}
 
-	contextErrors, err := contextGet[map[string]any](r.Context(), contextKeyErrors)
+	contextErrors, err := contextGet[any](r.Context(), contextKeyErrors)
 	if err != nil {
 		return err
 	}
@@ -324,7 +326,7 @@ func (i *Inertia) createRootTemplate() (*template.Template, error) {
 }
 
 func (i *Inertia) createViewData(r *http.Request, rt *runtime) (map[string]any, error) {
-	contextViewData, err := contextGet[map[string]any](r.Context(), contextKeyViewData)
+	contextViewData, err := contextGet[any](r.Context(), contextKeyViewData)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +381,7 @@ func (i *Inertia) ssr(ctx context.Context, rt *runtime, page *Page) (*Ssr, error
 }
 
 func (i *Inertia) createMainProps(r *http.Request, rt *runtime, page *Page, key contextKey) error {
-	props, err := contextGet[map[string]func() any](r.Context(), key)
+	props, err := contextGet[func() any](r.Context(), key)
 	if err != nil {
 		return err
 	}
@@ -419,12 +421,14 @@ func (i *Inertia) createMainProps(r *http.Request, rt *runtime, page *Page, key 
 }
 
 func (i *Inertia) createMergeableProps(r *http.Request, rt *runtime, page *Page, key contextKey) error {
-	props, err := contextGet[map[string]contextMergeableProp](r.Context(), key)
+	props, err := contextGet[contextMergeableProp](r.Context(), key)
 	if err != nil {
 		return err
 	}
 
-	for k, prop := range props {
+	for _, k := range slices.Sorted(maps.Keys(props)) {
+		prop := props[k]
+
 		_, ok := rt.except[k]
 		if ok || rt.isCachedOnce(k) {
 			continue

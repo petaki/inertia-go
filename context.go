@@ -36,37 +36,44 @@ type contextMergeableProp struct {
 	Value   func() any
 }
 
-func contextGet[T any](ctx context.Context, key contextKey) (T, error) {
-	v := ctx.Value(key)
-	if v == nil {
-		var zero T
-
-		return zero, nil
-	}
-
-	value, ok := v.(T)
-	if !ok {
-		var zero T
-
-		return zero, fmt.Errorf("%w: %s", ErrInvalidContextValue, key)
-	}
-
-	return value, nil
+type contextNode[T any] struct {
+	key    string
+	value  T
+	parent *contextNode[T]
 }
 
-func contextSet[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
-	v := ctx.Value(key)
+func (n *contextNode[T]) values() map[string]T {
+	values := make(map[string]T)
 
-	if v != nil {
-		props, ok := v.(map[string]T)
-		if ok {
-			props[propKey] = value
-
-			return context.WithValue(ctx, key, props)
+	for node := n; node != nil; node = node.parent {
+		if _, ok := values[node.key]; !ok {
+			values[node.key] = node.value
 		}
 	}
 
-	return context.WithValue(ctx, key, map[string]T{
-		propKey: value,
+	return values
+}
+
+func contextGet[T any](ctx context.Context, key contextKey) (map[string]T, error) {
+	v := ctx.Value(key)
+	if v == nil {
+		return nil, nil
+	}
+
+	node, ok := v.(*contextNode[T])
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidContextValue, key)
+	}
+
+	return node.values(), nil
+}
+
+func contextSet[T any](ctx context.Context, key contextKey, propKey string, value T) context.Context {
+	parent, _ := ctx.Value(key).(*contextNode[T])
+
+	return context.WithValue(ctx, key, &contextNode[T]{
+		key:    propKey,
+		value:  value,
+		parent: parent,
 	})
 }
