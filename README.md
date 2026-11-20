@@ -15,6 +15,8 @@ Install the package using the `go get` command:
 go get github.com/petaki/inertia-go
 ```
 
+Requires Go 1.27 or later.
+
 ## Usage
 
 ### 1. Create new instance
@@ -49,7 +51,8 @@ mux := http.NewServeMux()
 mux.Handle("/", inertiaManager.Middleware(http.HandlerFunc(homeHandler)))
 ```
 
-The middleware turns `302` redirects into `303` for Inertia `PUT`, `PATCH` and `DELETE` requests, as the protocol requires.
+- On an asset version mismatch, Inertia `GET` requests get `409 Conflict` and a full reload.
+- Inertia `PUT`, `PATCH`, and `DELETE` requests get `303` instead of `302` redirects.
 
 ### 3. Render in handlers
 
@@ -73,7 +76,7 @@ err := inertiaManager.Render(w, r, "home/Index", map[string]any{
     "total": 32,
 })
 
-//...
+// ...
 ```
 
 ### 4. Server-side Rendering (Optional)
@@ -107,9 +110,9 @@ inertiaManager.EnableSsr("http://ssr-host:13714/render", client)
 inertiaManager.EnableSsrWithDefault(client)
 ```
 
-`Render` returns an error if the SSR server fails, it does not fall back to client-side rendering.
+`Render` returns an error if the SSR server fails. It does not fall back to client-side rendering.
 
-For more information, please read the official Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
+For more information, read the Server-side Rendering documentation on [inertiajs.com](https://inertiajs.com).
 
 ## Page Props
 
@@ -127,7 +130,7 @@ For more information, please read the official Server-side Rendering documentati
 | Error | `WithErrorProp` | Eager | ✅ always | ✅ always |
 
 - `WithRescuedDeferredProp` omits the prop and adds its key to `rescuedProps` on error.
-- `WithScrollProp` adds scroll metadata, pair it with a merge or prepend prop.
+- `WithScrollProp` adds only scroll metadata. Pair it with a merge or prepend prop.
 - `WithOnce` can be combined with Deferred, Merge, Deep Merge, Prepend, and Optional props.
 - `WithOnceProp` and `WithOnce` props are excluded by the `X-Inertia-Except-Once-Props` header.
 - `X-Inertia-Except-Once-Props` header is ignored when the prop is explicitly requested.
@@ -147,7 +150,7 @@ For more information, please read the official Server-side Rendering documentati
 
 ## Examples
 
-The following examples show how to use the package.
+Each `With*` method returns a new context. Pass it on with `r.WithContext(ctx)`, or the value is lost.
 
 ### Share a function with root template (globally)
 
@@ -194,7 +197,7 @@ inertiaManager.Share("title", "Inertia App Title")
 func authenticate(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         // ...
-        
+
         ctx := inertiaManager.WithProp(r.Context(), "authUserID", user.ID)
         next.ServeHTTP(w, r.WithContext(ctx))
     })
@@ -325,7 +328,7 @@ ctx := inertiaManager.WithScrollProp(r.Context(), "items", inertia.ScrollPagePro
 r = r.WithContext(ctx)
 ```
 
-A scroll prop does not merge on its own, pair it with a merge or prepend prop:
+A scroll prop does not merge on its own. Pair it with a merge or prepend prop:
 
 ```go
 if r.Header.Get(inertia.HeaderScrollMergeIntent) == "prepend" {
@@ -410,6 +413,14 @@ r = r.WithContext(ctx)
 ctx := inertiaManager.WithPreserveFragment(r.Context())
 r = r.WithContext(ctx)
 ```
+
+### External redirect
+
+```go
+inertiaManager.Location(w, r, "https://example.com")
+```
+
+Inertia requests get `409 Conflict` with `X-Inertia-Location`, and the browser does a full visit.
 
 ### Root template
 
