@@ -49,6 +49,8 @@ mux := http.NewServeMux()
 mux.Handle("/", inertiaManager.Middleware(http.HandlerFunc(homeHandler)))
 ```
 
+The middleware turns `302` redirects into `303` for Inertia `PUT`, `PATCH` and `DELETE` requests, as the protocol requires.
+
 ### 3. Render in handlers
 
 ```go

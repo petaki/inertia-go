@@ -231,6 +231,11 @@ func (i *Inertia) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
+		switch r.Method {
+		case http.MethodPut, http.MethodPatch, http.MethodDelete:
+			w = &responseWriter{ResponseWriter: w}
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

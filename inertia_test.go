@@ -1865,3 +1865,40 @@ func TestLocation(t *testing.T) {
 		t.Errorf("expected empty body, got: %s", body)
 	}
 }
+
+func TestMiddlewareWithRedirect(t *testing.T) {
+	i := New("", "", "")
+
+	m := i.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/users", http.StatusFound)
+	}))
+
+	for _, tc := range []struct {
+		method   string
+		inertia  bool
+		expected int
+	}{
+		{http.MethodPut, true, http.StatusSeeOther},
+		{http.MethodPatch, true, http.StatusSeeOther},
+		{http.MethodDelete, true, http.StatusSeeOther},
+		{http.MethodPost, true, http.StatusFound},
+		{http.MethodPut, false, http.StatusFound},
+	} {
+		r := httptest.NewRequest(tc.method, "/", nil)
+		if tc.inertia {
+			r.Header.Set(HeaderInertia, "true")
+		}
+
+		w := httptest.NewRecorder()
+
+		m.ServeHTTP(w, r)
+
+		if w.Code != tc.expected {
+			t.Errorf("%s (inertia: %t): expected status code: %d, got: %d", tc.method, tc.inertia, tc.expected, w.Code)
+		}
+
+		if loc := w.Header().Get("Location"); loc != "/users" {
+			t.Errorf("%s (inertia: %t): expected: /users, got: %s", tc.method, tc.inertia, loc)
+		}
+	}
+}
