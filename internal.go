@@ -155,7 +155,9 @@ func (i *Inertia) createDeferredProps(r *http.Request, rt *runtime, page *Page) 
 		return err
 	}
 
-	for key, value := range deferredProps {
+	for _, key := range slices.Sorted(maps.Keys(deferredProps)) {
+		value := deferredProps[key]
+
 		_, ok := rt.except[key]
 		if ok || rt.isCachedOnce(key) {
 			continue
@@ -424,7 +426,9 @@ func (i *Inertia) createMergeableProps(r *http.Request, rt *runtime, page *Page,
 		return err
 	}
 
-	for k, prop := range props {
+	for _, k := range slices.Sorted(maps.Keys(props)) {
+		prop := props[k]
+
 		_, ok := rt.except[k]
 		if ok || rt.isCachedOnce(k) {
 			continue

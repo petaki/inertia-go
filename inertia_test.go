@@ -1902,3 +1902,50 @@ func TestMiddlewareWithRedirect(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderWithSortedPropKeys(t *testing.T) {
+	i := New("http://inertia-go.test", "", "")
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set(HeaderInertia, "true")
+
+	keys := []string{"e", "c", "a", "d", "b"}
+	ctx := r.Context()
+
+	for _, key := range keys {
+		ctx = i.WithMergeProp(ctx, key, func() any { return []int{1} }, "id")
+		ctx = i.WithDeferredProp(ctx, "deferred_"+key, func() any { return key })
+	}
+
+	r = r.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	err := i.Render(w, r, "test/component", nil)
+	if err != nil {
+		t.Error(err)
+	}
+
+	var page Page
+
+	err = json.NewDecoder(w.Result().Body).Decode(&page)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expected := "a,b,c,d,e"
+
+	if got := strings.Join(page.MergeProps, ","); got != expected {
+		t.Errorf("expected mergeProps %s, got: %s", expected, got)
+	}
+
+	expected = "a.id,b.id,c.id,d.id,e.id"
+
+	if got := strings.Join(page.MatchPropsOn, ","); got != expected {
+		t.Errorf("expected matchPropsOn %s, got: %s", expected, got)
+	}
+
+	expected = "deferred_a,deferred_b,deferred_c,deferred_d,deferred_e"
+
+	if got := strings.Join(page.DeferredProps["default"], ","); got != expected {
+		t.Errorf("expected deferredProps %s, got: %s", expected, got)
+	}
+}
